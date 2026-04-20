@@ -305,7 +305,7 @@ Antes de escrever código, entenda a jornada. Cada etapa introduz um conceito e 
 | 2 | Adicionar signal para o valor digitado | `signal()` como estado fonte | Criar e ler um signal no template |
 | 3 | Adicionar unidades de origem e destino | `signal()` para seleção | Múltiplos signals independentes |
 | 4 | Calcular conversão com computed | `computed()` como derivação | Derivar valor de múltiplos signals |
-| 5 | Expandir para múltiplas categorias | `signal()` para categoria ativa | Reatividade com mais fontes |
+| 5 | Expandir para múltiplas categorias | `signal()` para categoria ativa + organização de arquivos | Reatividade com mais fontes; separar TS puro do componente |
 | 6 | Adicionar histórico de conversões | `signal()` para lista, `.update()` | Signals com arrays |
 | 7 | Persistir histórico com effect | `effect()` como ponte para localStorage | Side effect controlado |
 | 8 | Carregar histórico ao iniciar | `signal()` com valor inicial do storage | Inicialização a partir de dados externos |
@@ -317,7 +317,7 @@ A progressão segue o princípio de carga cognitiva mínima:
 - **Etapas 1–2:** Só `signal`. Nenhuma derivação, nenhum efeito. Você precisa se sentir confortável criando e lendo signals antes de adicionar qualquer complexidade.
 - **Etapa 3:** Mais signals, mas ainda sem derivação. Aumenta a familiaridade com o primitivo antes de combinar.
 - **Etapa 4:** Primeiro `computed`. É aqui que o modelo mental de derivação se forma. O momento mais importante da fase.
-- **Etapa 5:** Expansão natural. Mais dados, mesmos conceitos. Repetição variada que fixa.
+- **Etapa 5:** Expansão natural. Mais dados, mesmos conceitos. Repetição variada que fixa. Antes de expandir, tipos e funções são extraídos para arquivos próprios — organização de TypeScript puro, não componentização Angular.
 - **Etapa 6:** Signal com array. Mudar um array dentro de um signal tem nuances que precisam de atenção.
 - **Etapa 7:** Primeiro `effect`. Introduzido só depois que `signal` e `computed` estão confortáveis. A fronteira entre derivação e efeito fica mais clara quando os dois já são familiares.
 - **Etapa 8:** Refinamento. Fechar o ciclo: o effect salva, a inicialização carrega.
@@ -1093,25 +1093,63 @@ Se sim, o `computed` está derivando corretamente a partir de três signals.
 
 **Raciocínio:** Repetir o pattern `signal + computed` em mais contextos consolida o aprendizado. A variação mostra que o modelo é o mesmo — muda o domínio, a reatividade funciona igual.
 
-Você verá uma função chamada `asUnit`. Ela é a versão genérica de `asTemperatureUnit`: pega o valor textual de um `<select>` e devolve uma unidade. Não é uma função de conversão matemática.
+#### Pausa de organização — arquivos separados para código puro
+
+Antes de escrever a Etapa 5, olhe o `app.component.ts` da Etapa 4. Ele já tem um tipo (`TemperatureUnit`), uma constante (`TEMPERATURE_UNITS`) e uma função de conversão (`convertTemperature`). Até aqui, o volume era pequeno — dava para ler tudo de uma vez.
+
+Mas a Etapa 5 vai triplicar esse volume: novos tipos (`Category`, `Unit`, `CategoryConfig`), mais funções de conversão (`convertViaBase`) e um mapa de configuração (`CATEGORIES`). Se tudo ficar junto, o componente vira uma parede de texto onde signals e matemática competem pela sua atenção.
+
+A solução é simples — e não envolve nenhum conceito Angular novo. É organização de arquivos TypeScript: `export` e `import`.
+
+Vamos separar em três arquivos:
+
+| Arquivo | O que contém | Por quê |
+|---|---|---|
+| `unit-conversion.models.ts` | Tipos: `Category`, `Unit`, `CategoryConfig` | Formas de dados — não mudam com frequência |
+| `unit-conversion.ts` | Funções: `convertTemperature`, `convertViaBase` | Matemática pura — não depende do Angular |
+| `unit-conversion.config.ts` | Constantes: `CATEGORIES`, `CATEGORY_KEYS` | Configuração de dados — consultada, não criada pelo componente |
+
+O `app.component.ts` fica com **só o que importa para esta fase**: signals, computed, template e métodos de evento.
+
+**O que isso NÃO é:** componentização. Não estamos criando componentes Angular novos — nenhum `@Component`, nenhum `input()`, nenhum `output()`. Isso é assunto da Fase 02. Aqui é só TypeScript puro: você define algo num arquivo, exporta, e importa em outro.
+
+```
+src/app/
+├── app.component.ts            ← signals, computed, template
+├── unit-conversion.models.ts   ← tipos (Category, Unit, CategoryConfig)
+├── unit-conversion.ts          ← funções (convertTemperature, convertViaBase)
+└── unit-conversion.config.ts   ← dados (CATEGORIES, CATEGORY_KEYS)
+```
+
+**Por que isso ajuda no aprendizado:** quando você abrir `app.component.ts`, vai ver *só* reatividade. Sem funções matemáticas no caminho. Sem interfaces. Sem arrays de configuração. Isso reduz a carga cognitiva exatamente onde ela mais importa — no momento em que o grafo reativo cresce para quatro signals e dois computeds.
+
+Crie os três arquivos na pasta `src/app/`:
+
+**Arquivo 1 — `src/app/unit-conversion.models.ts`**
 
 ```typescript
-// src/app/app.component.ts
-import { Component, signal, computed } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+// src/app/unit-conversion.models.ts
 
-// --- Tipos ---
-type Category = 'temperatura' | 'distância' | 'peso';
-type Unit = string;
+export type Category = 'temperatura' | 'distância' | 'peso';
 
-interface CategoryConfig {
+export type Unit = string;
+
+export interface CategoryConfig {
   label: string;
   units: Unit[];
   convert: (value: number, from: Unit, to: Unit) => number;
 }
+```
 
-// --- Funções de conversão ---
-function convertViaBase(
+Nada de Angular aqui. São definições TypeScript puras. `Category` limita quais categorias existem. `Unit` é genérica (`string`) porque cada categoria tem suas próprias unidades. `CategoryConfig` descreve o que cada categoria precisa ter: um label visual, uma lista de unidades e uma função de conversão.
+
+**Arquivo 2 — `src/app/unit-conversion.ts`**
+
+```typescript
+// src/app/unit-conversion.ts
+import { Unit } from './unit-conversion.models';
+
+export function convertViaBase(
   value: number,
   from: Unit,
   to: Unit,
@@ -1122,7 +1160,7 @@ function convertViaBase(
   return base / toBase[to];
 }
 
-function convertTemperature(value: number, from: Unit, to: Unit): number {
+export function convertTemperature(value: number, from: Unit, to: Unit): number {
   if (from === to) return value;
   let celsius: number;
   switch (from) {
@@ -1138,9 +1176,18 @@ function convertTemperature(value: number, from: Unit, to: Unit): number {
     default:   return celsius;
   }
 }
+```
 
-// --- Configuração das categorias ---
-const CATEGORIES: Record<Category, CategoryConfig> = {
+Matemática pura. Nenhuma dependência do Angular. `convertViaBase` serve para unidades com relação proporcional (distância, peso). `convertTemperature` precisa de fórmula dedicada porque Fahrenheit tem offset. Ambas recebem valores e retornam valores — são funções sem estado.
+
+**Arquivo 3 — `src/app/unit-conversion.config.ts`**
+
+```typescript
+// src/app/unit-conversion.config.ts
+import { Category, CategoryConfig } from './unit-conversion.models';
+import { convertTemperature, convertViaBase } from './unit-conversion';
+
+export const CATEGORIES: Record<Category, CategoryConfig> = {
   temperatura: {
     label: 'Temperatura',
     units: ['°C', '°F', 'K'],
@@ -1160,7 +1207,23 @@ const CATEGORIES: Record<Category, CategoryConfig> = {
   },
 };
 
-const CATEGORY_KEYS: Category[] = ['temperatura', 'distância', 'peso'];
+export const CATEGORY_KEYS: Category[] = ['temperatura', 'distância', 'peso'];
+```
+
+Este arquivo monta o mapa de categorias. Ele importa os tipos e as funções dos outros dois arquivos e exporta a configuração pronta. Adicionar uma nova categoria no futuro (Exercício 1) significa editar só este arquivo e o type `Category`.
+
+Agora sim, o componente:
+
+**Arquivo 4 — `src/app/app.component.ts`**
+
+Você verá uma função chamada `asUnit`. Ela é a versão genérica de `asTemperatureUnit`: pega o valor textual de um `<select>` e devolve uma unidade. Não é uma função de conversão matemática.
+
+```typescript
+// src/app/app.component.ts
+import { Component, signal, computed } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { Category, Unit } from './unit-conversion.models';
+import { CATEGORIES, CATEGORY_KEYS } from './unit-conversion.config';
 
 @Component({
   selector: 'app-root',
@@ -1346,15 +1409,16 @@ export class AppComponent {
 }
 ```
 
+Compare este `app.component.ts` com o da Etapa 4: ele não tem mais `type`, `interface`, `function` nem `const` de configuração. Tudo isso foi para arquivos próprios. O que sobra é o núcleo reativo — e é só isso que importa aqui.
+
 **O que acabou de entrar de novo?**
 
-Nesta etapa entram três ideias, mas elas têm papéis separados:
+Nesta etapa entram três ideias reativas e uma decisão de organização:
 
-1. `category` é uma nova fonte de verdade: qual categoria está ativa.
-2. `currentUnits` é uma derivação: quais unidades pertencem à categoria atual.
-3. `result` passa a usar a configuração da categoria atual.
-
-A matemática de `convertViaBase` e `convertTemperature` cresceu, mas ela continua fora do núcleo reativo. Pense nela como uma calculadora comum que o `computed` chama.
+1. **`category`** é uma nova fonte de verdade: qual categoria está ativa.
+2. **`currentUnits`** é uma nova derivação: quais unidades pertencem à categoria atual.
+3. **`result`** passa a usar a configuração da categoria atual.
+4. **Arquivos separados** — tipos, funções e configuração saíram do componente. Isso não muda nada na reatividade; muda a clareza de leitura.
 
 O método `asUnit` tem o mesmo papel que `asTemperatureUnit` na Etapa 3. A diferença é que agora as unidades podem ser temperatura, distância ou peso, então o tipo genérico `Unit = string` basta para esta fase.
 
@@ -1366,10 +1430,13 @@ O método `asUnit` tem o mesmo papel que `asTemperatureUnit` na Etapa 3. A difer
 
 3. **`onCategoryChange` faz múltiplos `.set()`** — Quando o usuário troca de categoria, o valor, a unidade de origem e a unidade de destino precisam resetar. Três `.set()` em sequência não significam que você precisa chamar três recálculos manuais. O grafo reativo fica inválido onde precisa ficar, e o template volta a ler os valores consistentes.
 
+4. **Os imports no topo** — `Category` e `Unit` vêm de `unit-conversion.models.ts`. `CATEGORIES` e `CATEGORY_KEYS` vêm de `unit-conversion.config.ts`. As funções de conversão não são importadas diretamente pelo componente — o mapa `CATEGORIES` já guarda referências a elas. O componente não precisa saber *como* converter; só pede ao config que converta.
+
 **O que esse código ensina:**
 - Computeds podem depender de outros computeds. `currentUnits` depende de `category`. O template depende de `currentUnits`. A cadeia reativa se estende naturalmente.
 - Múltiplos `.set()` em sequência não exigem múltiplas chamadas suas de atualização. Você altera as fontes; os computeds e o template seguem as dependências.
 - O pattern é sempre o mesmo: signal para fonte, computed para derivação. Muda o domínio, o modelo reativo é idêntico.
+- Separar TypeScript puro em arquivos próprios é uma boa prática que não tem nada a ver com Angular — funciona em qualquer projeto TypeScript.
 
 **Checkpoint:** Clique em "Distância". Os selects mudam para "m", "km", "mi"? Digite `1` com "km → mi". O resultado fica perto de `0.6214`? Clique em "Peso". Os selects mudam para "kg", "g", "lb"?
 
@@ -1381,10 +1448,12 @@ O método `asUnit` tem o mesmo papel que `asTemperatureUnit` na Etapa 3. A difer
 
 **Raciocínio:** Até agora, os signals guardam valores primitivos (number, string). Agora vamos usar um signal com array. Isso introduz uma nuance: para comunicar uma nova versão do estado, o array precisa ser *substituído* (imutável), não *modificado por dentro* (push). A referência é parte da mensagem.
 
-Adicione ao componente:
+Primeiro, adicione a interface `ConversionEntry` ao arquivo de modelos que você criou na Etapa 5:
 
 ```typescript
-interface ConversionEntry {
+// src/app/unit-conversion.models.ts  — adicione ao final do arquivo
+
+export interface ConversionEntry {
   value: number;
   from: Unit;
   to: Unit;
@@ -1394,9 +1463,15 @@ interface ConversionEntry {
 }
 ```
 
-No componente, adicione:
+Essa interface descreve uma conversão salva. Ela fica no arquivo de modelos pelo mesmo motivo que `CategoryConfig`: é uma forma de dado, não lógica do componente.
+
+Agora, no componente, importe `ConversionEntry` e adicione:
 
 ```typescript
+// No topo de app.component.ts, atualize o import de models:
+import { Category, Unit, ConversionEntry } from './unit-conversion.models';
+
+// Dentro da classe:
 export class AppComponent {
   // ... signals existentes ...
 
@@ -1582,7 +1657,7 @@ Altere a inicialização do signal `history`:
 history = signal<ConversionEntry[]>(loadHistory());
 ```
 
-E adicione a função fora do componente:
+E adicione a função `loadHistory` no final do arquivo `app.component.ts`, fora da classe (ela não é um método do componente — é uma função utilitária que roda uma vez na inicialização):
 
 ```typescript
 function loadHistory(): ConversionEntry[] {
@@ -1997,7 +2072,7 @@ Fórmulas:
 
 **O que testa:** Se você entende como adicionar dados à configuração sem modificar a lógica de signals e computeds. Se o computed de `result` continua funcionando sem alteração, você entendeu a separação entre dados e reatividade.
 
-**Critério de sucesso:** você adiciona a categoria mexendo na configuração e no mínimo necessário de tipos; não cria novo `computed` de resultado nem novo handler especial para velocidade.
+**Critério de sucesso:** você adiciona a categoria editando `unit-conversion.models.ts` (tipo `Category`), `unit-conversion.config.ts` (mapa `CATEGORIES` e array `CATEGORY_KEYS`), e opcionalmente `unit-conversion.ts` se precisar de uma função de conversão nova. O `app.component.ts` não muda. Não cria novo `computed` de resultado nem novo handler especial para velocidade.
 
 ### Exercício 2 — Impedir histórico duplicado consecutivo
 
@@ -2152,7 +2227,7 @@ Leve estes para frente e você terá problemas:
 
 ### Ponte para a Fase 02 — ShowCase
 
-Na Fase 01, tudo aconteceu num único componente. O conversor era simples o suficiente para isso. Mas apps reais têm dezenas de componentes que precisam se comunicar: um componente de filtro fala com um componente de lista, um componente de card recebe dados de um componente pai.
+Na Fase 01, tudo aconteceu num único componente Angular — a lógica reativa inteira vive em `AppComponent`. Na Etapa 5, separamos tipos, funções e configuração em arquivos TypeScript próprios, mas isso foi organização de código puro, não componentização Angular. A interface toda ainda é renderizada por um componente só. O conversor era simples o suficiente para isso. Mas apps reais têm dezenas de componentes que precisam se comunicar: um componente de filtro fala com um componente de lista, um componente de card recebe dados de um componente pai.
 
 A Fase 02 (ShowCase — Galeria de Componentes) vai ensinar exatamente isso:
 - Como dividir a interface em componentes menores

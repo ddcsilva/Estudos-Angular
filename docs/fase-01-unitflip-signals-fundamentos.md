@@ -693,24 +693,18 @@ const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
 
         <label>
           De
-          <select
-            [value]="unitFrom()"
-            (change)="onUnitFromChange($event)"
-          >
+          <select (change)="onUnitFromChange($event)">
             @for (unit of units; track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitFrom() === unit">{{ unit }}</option>
             }
           </select>
         </label>
 
         <label>
           Para
-          <select
-            [value]="unitTo()"
-            (change)="onUnitToChange($event)"
-          >
+          <select (change)="onUnitToChange($event)">
             @for (unit of units; track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitTo() === unit">{{ unit }}</option>
             }
           </select>
         </label>
@@ -816,7 +810,8 @@ export class AppComponent {
 3. `onUnitFromChange` e `onUnitToChange` — Atualizam os signals de unidade. Cada handler faz uma coisa pequena.
 4. `asTemperatureUnit(event)` — Pega o `<select>` que disparou o evento e lê o valor selecionado. A asserção `as TemperatureUnit` informa ao TypeScript que esse valor vem da lista controlada por `TEMPERATURE_UNITS`.
 5. `@for (unit of units; track unit)` — Control flow moderno do Angular. Renderiza as opções do select. `track unit` diz ao Angular como identificar cada item para otimizar re-renderização.
-6. `{{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}` — Três signals lidos no template. Cada leitura cria uma dependência reativa. Mude a unidade de origem e observe que o Angular sabe quais consumidores daquele signal precisam ser reavaliados.
+6. `[selected]="unitFrom() === unit"` — Sincroniza a opção visível do select com o valor do signal. Sem `FormsModule`, o atributo `[value]` no `<select>` não garante que o navegador exiba a opção correta na renderização inicial. O `[selected]` em cada `<option>` resolve isso: o Angular avalia a comparação e marca como selecionada a opção cujo valor coincide com o signal.
+7. `{{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}` — Três signals lidos no template. Cada leitura cria uma dependência reativa. Mude a unidade de origem e observe que o Angular sabe quais consumidores daquele signal precisam ser reavaliados.
 
 **O que esse código ensina:**
 - Signals podem ser tipados: `signal<Tipo>(valorInicial)`.
@@ -873,11 +868,13 @@ Agora, adicione o `computed` no componente:
 
 ```typescript
 import { Component, signal, computed } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 
 // ... (type e TEMPERATURE_UNITS ficam como antes)
 
 @Component({
   selector: 'app-root',
+  imports: [DecimalPipe],
   template: `
     <main class="unitflip">
       <h1>UnitFlip</h1>
@@ -895,24 +892,18 @@ import { Component, signal, computed } from '@angular/core';
 
         <label>
           De
-          <select
-            [value]="unitFrom()"
-            (change)="onUnitFromChange($event)"
-          >
+          <select (change)="onUnitFromChange($event)">
             @for (unit of units; track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitFrom() === unit">{{ unit }}</option>
             }
           </select>
         </label>
 
         <label>
           Para
-          <select
-            [value]="unitTo()"
-            (change)="onUnitToChange($event)"
-          >
+          <select (change)="onUnitToChange($event)">
             @for (unit of units; track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitTo() === unit">{{ unit }}</option>
             }
           </select>
         </label>
@@ -1022,7 +1013,12 @@ export class AppComponent {
 
 **O que acabou de entrar de novo?**
 
-Só uma coisa conceitual: `result = computed(...)`.
+Duas coisas:
+
+1. `result = computed(...)` — a fórmula reativa que calcula o resultado.
+2. `DecimalPipe` — importado de `@angular/common` para que o pipe `| number` funcione no template.
+
+**Sobre o `DecimalPipe`:** em componentes standalone, pipes não vêm "de graça". Cada pipe usado no template precisa ser importado explicitamente no array `imports` do `@Component`. O `| number:'1.2-2'` usa `DecimalPipe` por baixo. Sem esse import, o Angular emite um erro: `The pipe 'number' could not be found`. Você poderia importar `CommonModule` inteiro, mas importar só `DecimalPipe` é mais preciso — traz apenas o que o template usa.
 
 O resto é continuidade:
 
@@ -1102,6 +1098,7 @@ Você verá uma função chamada `asUnit`. Ela é a versão genérica de `asTemp
 ```typescript
 // src/app/app.component.ts
 import { Component, signal, computed } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 
 // --- Tipos ---
 type Category = 'temperatura' | 'distância' | 'peso';
@@ -1167,6 +1164,7 @@ const CATEGORY_KEYS: Category[] = ['temperatura', 'distância', 'peso'];
 
 @Component({
   selector: 'app-root',
+  imports: [DecimalPipe],
   template: `
     <main class="unitflip">
       <h1>UnitFlip</h1>
@@ -1195,24 +1193,18 @@ const CATEGORY_KEYS: Category[] = ['temperatura', 'distância', 'peso'];
 
         <label>
           De
-          <select
-            [value]="unitFrom()"
-            (change)="onUnitFromChange($event)"
-          >
+          <select (change)="onUnitFromChange($event)">
             @for (unit of currentUnits(); track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitFrom() === unit">{{ unit }}</option>
             }
           </select>
         </label>
 
         <label>
           Para
-          <select
-            [value]="unitTo()"
-            (change)="onUnitToChange($event)"
-          >
+          <select (change)="onUnitToChange($event)">
             @for (unit of currentUnits(); track unit) {
-              <option [value]="unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unitTo() === unit">{{ unit }}</option>
             }
           </select>
         </label>
@@ -1443,7 +1435,7 @@ O restante é código de lista:
 - `nextEntries` é o novo histórico, com a entrada recente no topo.
 - `.slice(0, 10)` mantém só as 10 últimas.
 
-No template, adicione um botão de salvar e a lista de histórico:
+No template, adicione um botão de salvar e a lista de histórico (lembre que `DecimalPipe` já está importado desde a Etapa 4):
 
 ```html
     <button (click)="addToHistory()" class="save-btn">

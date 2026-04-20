@@ -97,7 +97,7 @@ O usuário digita um valor, escolhe a unidade de origem e a unidade de destino. 
 | `computed()` para resultado da conversão | É derivação pura — depende do valor e das unidades |
 | `effect()` para persistir histórico no `localStorage` | É efeito colateral legítimo — sincroniza com o mundo externo |
 | Standalone component | Padrão do Angular moderno |
-| Zoneless change detection | Padrão didático da trilha para treinar o modelo moderno |
+| Zoneless change detection | No Angular 21+, é o comportamento padrão; a trilha assume esse modelo moderno desde o início |
 | Template com `@if` e `@for` | Uso mínimo para exibir histórico e resultado |
 
 ### O que NÃO entra no escopo
@@ -105,7 +105,7 @@ O usuário digita um valor, escolhe a unidade de origem e a unidade de destino. 
 | Não entra | Por quê |
 |---|---|
 | HTTP / APIs | Fórmulas de conversão são matemática pura; HTTP vem na Fase 03 |
-| Roteamento | Uma tela única; rotas vêm na Fase 05 |
+| Roteamento | O scaffold do Angular 21 pode gerar arquivos e providers de rota por padrão, mas eles serão ignorados aqui; rotas entram de verdade na Fase 05 |
 | Signal Forms / Reactive Forms | O input aqui é simples; formulários complexos vêm na Fase 06 |
 | Múltiplos componentes | Um componente é suficiente para o conversor; componentização vem na Fase 02 |
 | Estilização elaborada | CSS mínimo funcional; a atenção é no Angular, não na aparência |
@@ -369,6 +369,12 @@ ng serve
 
 > A flag `--ssr=false` simplifica o setup. SSR é tema da Fase 11. A flag `--skip-tests` evita gerar arquivos `.spec.ts` por enquanto — testes são tema da Fase 13.
 
+> **Nota de versão (Angular 21):** o scaffold atual da CLI costuma gerar `src/app/app.ts`, `src/app/app.html` e `src/app/app.css`, com a classe `App`, além de `app.config.ts` e `app.routes.ts`. Os snippets desta fase já seguem essa convenção. Se o seu projeto usar outra convenção de nomes, adapte apenas os caminhos e o nome da classe; os conceitos reativos continuam idênticos.
+
+> **Nota sobre zoneless:** no Angular 21+, zoneless já é o comportamento padrão. Nesta fase, isso não exige nenhuma configuração extra. O ponto didático é treinar a mentalidade de dependências explícitas com signals, não adicionar providers manualmente.
+
+> **Nota sobre roteamento:** se o projeto gerado vier com `app.routes.ts` e `provideRouter(...)`, ignore isso por enquanto. Esses arquivos existem no scaffold, mas não fazem parte do raciocínio desta fase.
+
 Abra `http://localhost:4200` e confirme que a página padrão do Angular aparece.
 
 Antes de limpar o componente, ajuste o CSS global uma única vez:
@@ -389,12 +395,12 @@ body {
 
 **Por que isso entra agora:** o fundo claro pertence à página inteira, não apenas ao componente. O `margin: 0` remove a margem padrão do navegador. O `min-height: 100vh` faz o `body` ocupar pelo menos a altura visível da janela. Juntos, eles evitam tanto a faixa de fundo limitada ao topo quanto a barra de rolagem artificial causada por `100vh` somado à margem padrão do `body`.
 
-Pense assim: `src/styles.css` pinta a folha inteira; `app.component.ts` organiza o cartão onde vamos estudar reatividade.
+Pense assim: `src/styles.css` pinta a folha inteira; `app.ts` organiza o cartão onde vamos estudar reatividade.
 
-Agora limpe o `app.component.ts` para começar do zero:
+Agora limpe o arquivo principal do componente para começar do zero:
 
 ```typescript
-// src/app/app.component.ts
+// src/app/app.ts
 import { Component } from '@angular/core';
 
 @Component({
@@ -433,10 +439,12 @@ import { Component } from '@angular/core';
     }
   `
 })
-export class AppComponent {}
+export class App {}
 ```
 
 **O que esse código ensina:** Nada de signals ainda. Só a estrutura mínima de um standalone component com template inline.
+
+**Se você preferir manter `app.html` e `app.css`:** não há problema. O snippet acima colapsa tudo em um arquivo para reduzir dispersão visual no começo da fase. Você pode distribuir o mesmo conteúdo entre `app.ts`, `app.html` e `app.css` sem mudar nenhum conceito reativo.
 
 **O que é só andaime visual:** o reset em `src/styles.css`, `.conversor-medidas`, `.subtitle`, `padding`, `border` e `background`. Eles deixam a tela estável desde o começo para você não precisar estudar reatividade em uma interface desalinhada. Repare na separação: o `body` cuida do fundo da página inteira; o componente cuida do conteúdo.
 
@@ -491,7 +499,7 @@ Agora adicione o input lendo o mesmo signal:
 Agora sim entra o evento `(input)` e o método `onInputChange`.
 
 ```typescript
-// src/app/app.component.ts
+// src/app/app.ts
 import { Component, signal } from '@angular/core';
 
 @Component({
@@ -574,7 +582,7 @@ import { Component, signal } from '@angular/core';
     }
   `
 })
-export class AppComponent {
+export class App {
   inputValue = signal(0);
 
   onInputChange(event: Event) {
@@ -682,7 +690,7 @@ Essa função **não converte temperatura**. Ela só interpreta o valor selecion
 Agora veja o código completo da etapa:
 
 ```typescript
-// src/app/app.component.ts
+// src/app/app.ts
 import { Component, signal } from '@angular/core';
 
 type TemperatureUnit = '°C' | '°F' | 'K';
@@ -788,7 +796,7 @@ const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
     }
   `
 })
-export class AppComponent {
+export class App {
   readonly units = TEMPERATURE_UNITS;
 
   inputValue = signal(0);
@@ -988,7 +996,7 @@ import { DecimalPipe } from '@angular/common';
     }
   `
 })
-export class AppComponent {
+export class App {
   readonly units = TEMPERATURE_UNITS;
 
   inputValue = signal(0);
@@ -1110,7 +1118,7 @@ Se sim, o `computed` está derivando corretamente a partir de três signals.
 
 #### Pausa de organização — arquivos separados para código puro
 
-Antes de escrever a Etapa 5, olhe o `app.component.ts` da Etapa 4. Ele já tem um tipo (`TemperatureUnit`), uma constante (`TEMPERATURE_UNITS`) e uma função de conversão (`convertTemperature`). Até aqui, o volume era pequeno — dava para ler tudo de uma vez.
+Antes de escrever a Etapa 5, olhe o arquivo principal do componente da Etapa 4. Ele já tem um tipo (`TemperatureUnit`), uma constante (`TEMPERATURE_UNITS`) e uma função de conversão (`convertTemperature`). Até aqui, o volume era pequeno — dava para ler tudo de uma vez.
 
 Mas a Etapa 5 vai triplicar esse volume: novos tipos (`Category`, `Unit`, `CategoryConfig`), mais funções de conversão (`convertViaBase`) e um mapa de configuração (`CATEGORIES`). Se tudo ficar junto, o componente vira uma parede de texto onde signals e matemática competem pela sua atenção.
 
@@ -1124,19 +1132,19 @@ Vamos separar em três arquivos:
 | `unit-conversion.ts` | Funções: `convertTemperature`, `convertViaBase` | Matemática pura — não depende do Angular |
 | `unit-conversion.config.ts` | Constantes: `CATEGORIES`, `CATEGORY_KEYS` | Configuração de dados — consultada, não criada pelo componente |
 
-O `app.component.ts` fica com **só o que importa para esta fase**: signals, computed, template e métodos de evento.
+O arquivo principal do componente fica com **só o que importa para esta fase**: signals, computed, template e métodos de evento.
 
 **O que isso NÃO é:** componentização. Não estamos criando componentes Angular novos — nenhum `@Component`, nenhum `input()`, nenhum `output()`. Isso é assunto da Fase 02. Aqui é só TypeScript puro: você define algo num arquivo, exporta, e importa em outro.
 
 ```
 src/app/
-├── app.component.ts            ← signals, computed, template
+├── app.ts                      ← signals, computed, template
 ├── unit-conversion.models.ts   ← tipos (Category, Unit, CategoryConfig)
 ├── unit-conversion.ts          ← funções (convertTemperature, convertViaBase)
 └── unit-conversion.config.ts   ← dados (CATEGORIES, CATEGORY_KEYS)
 ```
 
-**Por que isso ajuda no aprendizado:** quando você abrir `app.component.ts`, vai ver *só* reatividade. Sem funções matemáticas no caminho. Sem interfaces. Sem arrays de configuração. Isso reduz a carga cognitiva exatamente onde ela mais importa — no momento em que o grafo reativo cresce para quatro signals e dois computeds.
+**Por que isso ajuda no aprendizado:** quando você abrir o arquivo principal do componente, vai ver *só* reatividade. Sem funções matemáticas no caminho. Sem interfaces. Sem arrays de configuração. Isso reduz a carga cognitiva exatamente onde ela mais importa — no momento em que o grafo reativo cresce para quatro signals e dois computeds.
 
 Crie os três arquivos na pasta `src/app/`:
 
@@ -1229,12 +1237,12 @@ Este arquivo monta o mapa de categorias. Ele importa os tipos e as funções dos
 
 Agora sim, o componente:
 
-**Arquivo 4 — `src/app/app.component.ts`**
+**Arquivo 4 — `src/app/app.ts`**
 
 Você verá uma função chamada `asUnit`. Ela é a versão genérica de `asTemperatureUnit`: pega o valor textual de um `<select>` e devolve uma unidade. Não é uma função de conversão matemática.
 
 ```typescript
-// src/app/app.component.ts
+// src/app/app.ts
 import { Component, signal, computed } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Category, Unit } from './unit-conversion.models';
@@ -1373,7 +1381,7 @@ import { CATEGORIES, CATEGORY_KEYS } from './unit-conversion.config';
     }
   `
 })
-export class AppComponent {
+export class App {
   readonly categories = CATEGORIES;
   readonly categoryKeys = CATEGORY_KEYS;
 
@@ -1424,7 +1432,7 @@ export class AppComponent {
 }
 ```
 
-Compare este `app.component.ts` com o da Etapa 4: ele não tem mais `type`, `interface`, `function` nem `const` de configuração. Tudo isso foi para arquivos próprios. O que sobra é o núcleo reativo — e é só isso que importa aqui.
+Compare este arquivo principal do componente com o da Etapa 4: ele não tem mais `type`, `interface`, `function` nem `const` de configuração. Tudo isso foi para arquivos próprios. O que sobra é o núcleo reativo — e é só isso que importa aqui.
 
 **O que acabou de entrar de novo?**
 
@@ -1483,11 +1491,11 @@ Essa interface descreve uma conversão salva. Ela fica no arquivo de modelos pel
 Agora, no componente, importe `ConversionEntry` e adicione:
 
 ```typescript
-// No topo de app.component.ts, atualize o import de models:
+// No topo do arquivo principal do componente, atualize o import de models:
 import { Category, Unit, ConversionEntry } from './unit-conversion.models';
 
 // Dentro da classe:
-export class AppComponent {
+export class App {
   // ... signals existentes ...
 
   history = signal<ConversionEntry[]>([]);
@@ -1600,7 +1608,7 @@ import { Component, signal, computed, effect } from '@angular/core';
 
 // ...
 
-export class AppComponent {
+export class App {
   // ... signals e computeds existentes ...
 
   constructor() {
@@ -1672,7 +1680,7 @@ Altere a inicialização do signal `history`:
 history = signal<ConversionEntry[]>(loadHistory());
 ```
 
-E adicione a função `loadHistory` no final do arquivo `app.component.ts`, fora da classe (ela não é um método do componente — é uma função utilitária que roda uma vez na inicialização):
+E adicione a função `loadHistory` no final do arquivo principal do componente, fora da classe (ela não é um método do componente — é uma função utilitária que roda uma vez na inicialização):
 
 ```typescript
 function loadHistory(): ConversionEntry[] {
@@ -2087,7 +2095,7 @@ Fórmulas:
 
 **O que testa:** Se você entende como adicionar dados à configuração sem modificar a lógica de signals e computeds. Se o computed de `result` continua funcionando sem alteração, você entendeu a separação entre dados e reatividade.
 
-**Critério de sucesso:** você adiciona a categoria editando `unit-conversion.models.ts` (tipo `Category`), `unit-conversion.config.ts` (mapa `CATEGORIES` e array `CATEGORY_KEYS`), e opcionalmente `unit-conversion.ts` se precisar de uma função de conversão nova. O `app.component.ts` não muda. Não cria novo `computed` de resultado nem novo handler especial para velocidade.
+**Critério de sucesso:** você adiciona a categoria editando `unit-conversion.models.ts` (tipo `Category`), `unit-conversion.config.ts` (mapa `CATEGORIES` e array `CATEGORY_KEYS`), e opcionalmente `unit-conversion.ts` se precisar de uma função de conversão nova. O arquivo principal do componente não muda. Não cria novo `computed` de resultado nem novo handler especial para velocidade.
 
 ### Exercício 2 — Impedir histórico duplicado consecutivo
 
@@ -2242,7 +2250,7 @@ Leve estes para frente e você terá problemas:
 
 ### Ponte para a Fase 02 — ShowCase
 
-Na Fase 01, tudo aconteceu num único componente Angular — a lógica reativa inteira vive em `AppComponent`. Na Etapa 5, separamos tipos, funções e configuração em arquivos TypeScript próprios, mas isso foi organização de código puro, não componentização Angular. A interface toda ainda é renderizada por um componente só. O conversor era simples o suficiente para isso. Mas apps reais têm dezenas de componentes que precisam se comunicar: um componente de filtro fala com um componente de lista, um componente de card recebe dados de um componente pai.
+Na Fase 01, tudo aconteceu num único componente Angular — a lógica reativa inteira vive em um único componente raiz. Na Etapa 5, separamos tipos, funções e configuração em arquivos TypeScript próprios, mas isso foi organização de código puro, não componentização Angular. A interface toda ainda é renderizada por um componente só. O conversor era simples o suficiente para isso. Mas apps reais têm dezenas de componentes que precisam se comunicar: um componente de filtro fala com um componente de lista, um componente de card recebe dados de um componente pai.
 
 A Fase 02 (ShowCase — Galeria de Componentes) vai ensinar exatamente isso:
 - Como dividir a interface em componentes menores

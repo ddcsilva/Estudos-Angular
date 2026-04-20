@@ -1,4 +1,4 @@
-# Fase 01 — UnitFlip: Fundamentos Reativos com Signals
+# Fase 01 — Conversor de Medidas: Fundamentos Reativos com Signals
 
 > **O que é este documento:** o guia completo da primeira fase da trilha de mini projetos Angular moderno. Ensina `signal`, `computed` e `effect` construindo um conversor de unidades progressivo.
 > **O que não é:** tutorial de setup, aula de CSS, guia de arquitetura.
@@ -79,7 +79,7 @@ John Sweller, ao estudar carga cognitiva, mostrou que aprender fica mais difíci
 
 ## 2. O que Será Construído
 
-### O mini projeto: UnitFlip
+### O mini projeto: Conversor de Medidas
 
 Um conversor interativo de unidades com três categorias:
 
@@ -157,7 +157,7 @@ Em um sistema reativo bem modelado, você tenta separar três papéis. Nem todo 
 
 Essa separação é a versão Angular de uma ideia clássica de design: reduzir ambiguidades sobre onde a verdade vive. David Parnas defendia esconder decisões de projeto para reduzir acoplamento; Martin Fowler costuma insistir que nomes e estruturas devem revelar intenção. Aqui, a intenção é simples: se algo é fonte, chame de `signal`; se é consequência, chame de `computed`; se é ação externa, chame de `effect`.
 
-**Checkpoint de previsão:** antes de seguir, responda sem olhar o código: no UnitFlip, o resultado da conversão deve ser salvo em um `signal` ou calculado por um `computed`? Se sua resposta foi "computed", você já entendeu metade da fase.
+**Checkpoint de previsão:** antes de seguir, responda sem olhar o código: no Conversor de Medidas, o resultado da conversão deve ser salvo em um `signal` ou calculado por um `computed`? Se sua resposta foi "computed", você já entendeu metade da fase.
 
 ### Estado fonte: `signal()`
 
@@ -175,7 +175,7 @@ Regras fundamentais:
 - Ler um signal exige parênteses: `temperatura()`, não `temperatura`.
 - Só signals criados com `signal()` podem ser atualizados (`.set()`, `.update()`). Signals retornados por `computed()` são apenas leitura.
 
-O ponto mais importante: nem todo valor que muda merece ser um signal. Um signal deve representar uma fonte de verdade da aplicação. No UnitFlip, o valor digitado é fonte de verdade porque vem do usuário. O resultado da conversão não é fonte; é consequência.
+O ponto mais importante: nem todo valor que muda merece ser um signal. Um signal deve representar uma fonte de verdade da aplicação. No Conversor de Medidas, o valor digitado é fonte de verdade porque vem do usuário. O resultado da conversão não é fonte; é consequência.
 
 ### Valor derivado: `computed()`
 
@@ -213,7 +213,7 @@ effect(() => {
 
 A regra de ouro: **`effect()` é para o mundo fora do Angular**. Se o resultado deve aparecer no template ou alimentar outro signal, use `computed()`. Se o resultado é salvar num storage, logar num analytics, ou atualizar uma lib de terceiros, use `effect()`.
 
-Na documentação oficial, o alerta é claro: não use effects para propagar mudanças de estado. Isso pode gerar ciclos, erros de verificação e atualizações desnecessárias. No UnitFlip, `effect()` é apropriado para `localStorage` porque o storage não é parte do grafo reativo do Angular.
+Na documentação oficial, o alerta é claro: não use effects para propagar mudanças de estado. Isso pode gerar ciclos, erros de verificação e atualizações desnecessárias. No Conversor de Medidas, `effect()` é apropriado para `localStorage` porque o storage não é parte do grafo reativo do Angular.
 
 **Nota sobre `onCleanup`:** effects podem registrar uma limpeza com `onCleanup` quando criam recursos duráveis, como `setInterval`, timers, listeners manuais ou subscriptions. O effect desta fase não precisa de cleanup porque `localStorage.setItem` é uma ação síncrona e instantânea: ela acontece e termina.
 
@@ -223,7 +223,7 @@ O template Angular é, ele próprio, um contexto reativo. Quando você escreve `
 
 Isso é a mentalidade compatível com o modelo moderno e zoneless: em vez de depender de uma varredura ampla para descobrir se algo talvez mudou, você declara fontes e leituras reativas. O Angular sabe onde a mudança importa porque o signal foi lido em um contexto rastreável.
 
-### O fluxo completo no UnitFlip
+### O fluxo completo no Conversor de Medidas
 
 ```
 Usuário digita "100"
@@ -262,36 +262,51 @@ O grafo diz quem depende de quem. `result` depende das entradas. O template depe
 
 ## 5. Intuição e Analogias
 
-Analogias ajudam a fixar, mas analogias erradas ensinam errado. Estas foram escolhidas por serem tecnicamente fiéis ao comportamento real.
+Analogias ajudam a fixar, mas analogias erradas ensinam errado. Pense nelas como mapas parciais: elas aproximam o conceito, mas não substituem a definição técnica.
 
-### Signal — a célula de uma planilha
+Para esta fase, a imagem principal é a de um conversor simples na tela: existem controles que o usuário mexe, um visor que mostra o resultado, e mecanismos externos que podem salvar ou sincronizar algo fora da tela.
 
-Imagine uma célula `A1` numa planilha. Você digita `100` nela. Essa célula é um signal: tem um valor, e quem depende dela sabe que ela pode mudar.
+### Signal — o controle que o usuário mexe
 
-- `signal(100)` = digitar 100 na célula A1.
-- `.set(200)` = apagar e digitar 200.
-- `.update(v => v + 1)` = editar a célula para ser "valor anterior + 1".
+Imagine os controles reais do conversor: o campo onde você digita o valor, o seletor da unidade de origem e o seletor da unidade de destino. Esses controles são as partes que alguém realmente altera.
 
-### Computed — a fórmula de uma planilha
+Esse é o papel de um `signal`: guardar uma informação editável que é fonte de verdade para o resto da tela.
 
-Agora imagine a célula `B1` com a fórmula `=A1 * 9/5 + 32`. Você não digita um número em `B1`. Ela calcula sozinha. Se `A1` muda, `B1` recalcula automaticamente. Se `A1` não mudou, `B1` mostra o valor anterior sem recalcular.
+- `signal(100)` = o campo começa com o valor 100.
+- `.set(200)` = o usuário trocou o valor para 200.
+- `.update(v => v + 1)` = o controle mudou usando o valor anterior como base.
 
-- `computed(() => celsius() * 9/5 + 32)` = a fórmula da célula B1.
-- Nunca se faz `.set()` num computed. Assim como nunca se digita manualmente numa célula com fórmula.
+No Conversor de Medidas, `inputValue`, `unitFrom`, `unitTo` e `category` são controles conceituais da aplicação. Eles podem ser alterados diretamente por uma ação do usuário ou por um método do componente.
 
-### Effect — a impressora automática
+### Computed — o visor que calcula sozinho
 
-Agora imagine que você configurou a planilha para **imprimir automaticamente** toda vez que `B1` mudar. A impressora não é parte da planilha. Ela é o mundo externo. Você não quer que a impressora calcule o resultado, nem que edite a célula `A1`. Você quer apenas que ela execute uma ação quando a planilha já tem um valor pronto.
+Agora imagine o visor do conversor. Você não digita o resultado nele. O visor olha para os controles, aplica a regra de conversão e mostra o valor correspondente.
 
-- `effect(() => localStorage.setItem(...))` = a impressora que reage a mudanças.
-- O effect não produz valor. Ele produz ação no mundo externo.
-- Se a impressora começa a editar células, ela deixa de ser saída e vira parte confusa da fórmula. É assim que bugs circulares nascem.
+Esse é o papel de um `computed`: produzir um valor derivado a partir de signals. Se o valor digitado muda, o visor muda. Se a unidade de origem muda, o visor muda. Se nada relevante mudou, ele reaproveita o resultado memorizado.
+
+- `computed(() => celsius() * 9/5 + 32)` = o visor calculando Fahrenheit a partir de Celsius.
+- Nunca se faz `.set()` num computed, porque ele não é um controle editável.
+- O computed não decide quando recalcular por chute. Ele depende dos signals lidos dentro da função.
+
+Essa distinção é central: o usuário mexe nos controles; o visor apenas mostra a consequência correta desses controles.
+
+### Effect — o mecanismo que age fora da tela
+
+Agora imagine que, além de mostrar o resultado, o conversor salva o histórico das últimas conversões no navegador. Esse salvamento não é um novo valor para o template calcular. É uma ação fora da tela: gravar em `localStorage`, enviar um log, sincronizar uma biblioteca externa.
+
+Esse é o papel de um `effect`: observar signals e executar uma ação externa quando eles mudam.
+
+- `effect(() => localStorage.setItem(...))` = o mecanismo que salva o histórico quando ele muda.
+- O effect não produz um valor para a tela. Ele executa uma ação fora do grafo reativo do Angular.
+- Se o effect começa a recalcular resultado ou alterar controles para derivar estado, as responsabilidades se misturam.
 
 ### A fronteira que não deve ser cruzada
 
-Se a impressora (effect) começasse a alterar o valor da célula A1, você teria um loop infinito: A1 muda → B1 recalcula → impressora dispara → impressora muda A1 → B1 recalcula → impressora dispara...
+Se o mecanismo externo começasse a alterar controles para derivar estado, você poderia criar um ciclo: controle muda → visor recalcula → effect roda → effect muda controle → visor recalcula → effect roda de novo.
 
 No Angular, a regra prática é: **não use `.set()` ou `.update()` dentro de um `effect()` para derivar estado**. Isso pode causar `ExpressionChangedAfterItHasBeenChecked`, ciclos circulares ou atualizações difíceis de rastrear. Se um valor depende de outro, use `computed()`. Se o estado precisa ser derivado e também ajustável pelo usuário, isso vira assunto de `linkedSignal` em uma fase posterior.
+
+**Observação opcional:** se você já usou planilhas, `signal` lembra uma célula editável e `computed` lembra uma célula com fórmula. Essa analogia ajuda algumas pessoas, mas não é a base da fase. A base aqui é mais direta: controles editáveis, visor calculado, ação externa.
 
 ---
 
@@ -347,8 +362,8 @@ O objetivo é que você não precise gastar energia com uma tela torta, um tern�
 No terminal:
 
 ```bash
-ng new unitflip --style=css --ssr=false --skip-tests
-cd unitflip
+ng new conversor-medidas --style=css --ssr=false --skip-tests
+cd conversor-medidas
 ng serve
 ```
 
@@ -385,8 +400,8 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-root',
   template: `
-    <main class="unitflip">
-      <h1>UnitFlip</h1>
+    <main class="conversor-medidas">
+      <h1>Conversor de Medidas</h1>
       <p class="subtitle">Conversor de unidades — Fase 01</p>
     </main>
   `,
@@ -398,7 +413,7 @@ import { Component } from '@angular/core';
       color: #172033;
     }
 
-    .unitflip {
+    .conversor-medidas {
       width: min(100%, 480px);
       margin: 0 auto;
       padding: 1.5rem;
@@ -423,9 +438,9 @@ export class AppComponent {}
 
 **O que esse código ensina:** Nada de signals ainda. Só a estrutura mínima de um standalone component com template inline.
 
-**O que é só andaime visual:** o reset em `src/styles.css`, `.unitflip`, `.subtitle`, `padding`, `border` e `background`. Eles deixam a tela estável desde o começo para você não precisar estudar reatividade em uma interface desalinhada. Repare na separação: o `body` cuida do fundo da página inteira; o componente cuida do conteúdo.
+**O que é só andaime visual:** o reset em `src/styles.css`, `.conversor-medidas`, `.subtitle`, `padding`, `border` e `background`. Eles deixam a tela estável desde o começo para você não precisar estudar reatividade em uma interface desalinhada. Repare na separação: o `body` cuida do fundo da página inteira; o componente cuida do conteúdo.
 
-**Checkpoint:** A página exibe "UnitFlip" e "Conversor de unidades — Fase 01" dentro de uma área branca alinhada, com fundo claro ocupando a página inteira e sem barra de rolagem vertical desnecessária? Se não exibe assim, resolva antes de seguir.
+**Checkpoint:** A página exibe "Conversor de Medidas" e "Conversor de unidades — Fase 01" dentro de uma área branca alinhada, com fundo claro ocupando a página inteira e sem barra de rolagem vertical desnecessária? Se não exibe assim, resolva antes de seguir.
 
 **Se apareceu uma barra de rolagem:** confira se `src/styles.css` tem `body { margin: 0; }`. Sem esse reset, a altura de `100vh` pode somar com a margem padrão do navegador.
 
@@ -482,8 +497,8 @@ import { Component, signal } from '@angular/core';
 @Component({
   selector: 'app-root',
   template: `
-    <main class="unitflip">
-      <h1>UnitFlip</h1>
+    <main class="conversor-medidas">
+      <h1>Conversor de Medidas</h1>
       <p class="subtitle">Conversor de unidades — Fase 01</p>
 
       <div class="form-grid">
@@ -509,7 +524,7 @@ import { Component, signal } from '@angular/core';
       color: #172033;
     }
 
-    .unitflip {
+    .conversor-medidas {
       width: min(100%, 480px);
       margin: 0 auto;
       padding: 1.5rem;
@@ -677,8 +692,8 @@ const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
 @Component({
   selector: 'app-root',
   template: `
-    <main class="unitflip">
-      <h1>UnitFlip</h1>
+    <main class="conversor-medidas">
+      <h1>Conversor de Medidas</h1>
       <p class="subtitle">Conversor de unidades — Fase 01</p>
 
       <div class="form-grid">
@@ -723,7 +738,7 @@ const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
       color: #172033;
     }
 
-    .unitflip {
+    .conversor-medidas {
       width: min(100%, 480px);
       margin: 0 auto;
       padding: 1.5rem;
@@ -876,8 +891,8 @@ import { DecimalPipe } from '@angular/common';
   selector: 'app-root',
   imports: [DecimalPipe],
   template: `
-    <main class="unitflip">
-      <h1>UnitFlip</h1>
+    <main class="conversor-medidas">
+      <h1>Conversor de Medidas</h1>
       <p class="subtitle">Conversor de unidades — Fase 01</p>
 
       <div class="form-grid">
@@ -923,7 +938,7 @@ import { DecimalPipe } from '@angular/common';
       color: #172033;
     }
 
-    .unitflip {
+    .conversor-medidas {
       width: min(100%, 480px);
       margin: 0 auto;
       padding: 1.5rem;
@@ -1229,8 +1244,8 @@ import { CATEGORIES, CATEGORY_KEYS } from './unit-conversion.config';
   selector: 'app-root',
   imports: [DecimalPipe],
   template: `
-    <main class="unitflip">
-      <h1>UnitFlip</h1>
+    <main class="conversor-medidas">
+      <h1>Conversor de Medidas</h1>
       <p class="subtitle">Conversor de unidades — Fase 01</p>
 
       <nav class="category-tabs">
@@ -1287,7 +1302,7 @@ import { CATEGORIES, CATEGORY_KEYS } from './unit-conversion.config';
       color: #172033;
     }
 
-    .unitflip {
+    .conversor-medidas {
       width: min(100%, 480px);
       margin: 0 auto;
       padding: 1.5rem;
@@ -1591,7 +1606,7 @@ export class AppComponent {
   constructor() {
     effect(() => {
       const entries = this.history();
-      localStorage.setItem('unitflip-history', JSON.stringify(entries));
+      localStorage.setItem('conversor-medidas-history', JSON.stringify(entries));
     });
   }
 
@@ -1610,7 +1625,7 @@ Ele lê `history()` e escreve no `localStorage`. Essa é a fronteira importante:
 ```typescript
 effect(() => {
   const entries = this.history();
-  localStorage.setItem('unitflip-history', JSON.stringify(entries));
+  localStorage.setItem('conversor-medidas-history', JSON.stringify(entries));
 });
 ```
 
@@ -1627,7 +1642,7 @@ effect(() => {
 - O efeito roda automaticamente quando as dependências mudam. Você não precisa chamar nada.
 - `onCleanup` não é necessário aqui: não há timer, subscription ou listener para desmontar. A escrita no `localStorage` começa e termina na mesma linha.
 
-**Checkpoint:** Adicione duas conversões ao histórico. Abra o DevTools → Application → Local Storage. Existe uma chave `unitflip-history` com um array JSON? Sim? O efeito está funcionando.
+**Checkpoint:** Adicione duas conversões ao histórico. Abra o DevTools → Application → Local Storage. Existe uma chave `conversor-medidas-history` com um array JSON? Sim? O efeito está funcionando.
 
 **Pare e compare:** Na Etapa 4, você criou um `computed` que calcula o resultado. Aqui, você criou um `effect` que salva no storage. A diferença:
 
@@ -1662,7 +1677,7 @@ E adicione a função `loadHistory` no final do arquivo `app.component.ts`, fora
 ```typescript
 function loadHistory(): ConversionEntry[] {
   try {
-    const raw = localStorage.getItem('unitflip-history');
+    const raw = localStorage.getItem('conversor-medidas-history');
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
@@ -1923,7 +1938,7 @@ inputValueFormatted = computed(() => this.inputValue().toFixed(2));
 
 ```typescript
 // ❌ Nunca muda — não precisa ser reativo
-title = signal('UnitFlip');
+title = signal('Conversor de Medidas');
 maxHistorySize = signal(10);
 ```
 
@@ -1931,7 +1946,7 @@ maxHistorySize = signal(10);
 
 ```typescript
 // ✅ Constante. Sem reatividade. Sem overhead.
-readonly title = 'UnitFlip';
+readonly title = 'Conversor de Medidas';
 readonly maxHistorySize = 10;
 ```
 
@@ -2048,13 +2063,13 @@ Estas perguntas validam se o modelo mental está formado, não se a sintaxe foi 
 
 ### Sobre o modelo completo
 
-**12. "No UnitFlip, qual é a fonte real de verdade?"**
+**12. "No Conversor de Medidas, qual é a fonte real de verdade?"**
 > Os quatro signals: `inputValue`, `unitFrom`, `unitTo`, `category`. Tudo mais (resultado, lista de unidades, persistência) é derivado ou efeito desses quatro.
 
 **13. "Se eu removesse o `computed` de `result` e exibisse `convertTemperature(...)` direto no template, o que mudaria?"**
 > Funcionaria, mas a conversão poderia rodar sempre que o template fosse verificado/renderizado, sem a mesma memoização nem a mesma clareza de intenção. Para uma fórmula simples, a diferença é imperceptível. Para uma fórmula pesada, lista grande ou renderização frequente, o custo acumulado aparece.
 
-**Checkpoint de ensino:** explique o UnitFlip para alguém usando apenas quatro palavras-chave: **fonte**, **derivação**, **efeito** e **template**. Se você conseguir montar essa explicação sem citar sintaxe, o modelo mental está mais forte que a memória de curto prazo.
+**Checkpoint de ensino:** explique o Conversor de Medidas para alguém usando apenas quatro palavras-chave: **fonte**, **derivação**, **efeito** e **template**. Se você conseguir montar essa explicação sem citar sintaxe, o modelo mental está mais forte que a memória de curto prazo.
 
 ---
 
@@ -2140,7 +2155,7 @@ Signals são primitivos de reatividade granular. Antes deles, o Angular dependia
 
 Signals resolvem isso declarando onde o estado vive e quem depende dele. Quando um signal muda, os consumidores daquele signal podem ser notificados diretamente. O resultado é uma detecção de mudanças mais granular: o Angular trabalha com dependências conhecidas em vez de depender apenas de uma suspeita global de que "algo talvez mudou".
 
-No UnitFlip, quando `inputValue` muda, `result` fica desatualizado porque depende dele via `computed`, e os trechos do template que leem `inputValue()` e `result()` têm uma dependência explícita. Você não precisa espalhar chamadas de atualização por botões, selects e handlers.
+No Conversor de Medidas, quando `inputValue` muda, `result` fica desatualizado porque depende dele via `computed`, e os trechos do template que leem `inputValue()` e `result()` têm uma dependência explícita. Você não precisa espalhar chamadas de atualização por botões, selects e handlers.
 
 ### "Qual a diferença entre `computed` e `effect`?"
 
@@ -2167,7 +2182,7 @@ Zone.js intercepta operações assíncronas para saber quando "algo pode ter mud
 
 Nesta trilha, usamos zoneless como padrão didático para treinar a mentalidade moderna. Isso não significa que Zone.js deixou de funcionar; significa que, com signals, você aprende a depender menos de interceptação global e mais de dependências explícitas.
 
-O UnitFlip foi desenhado para funcionar bem nesse modelo. Quando `inputValue.set(100)` é chamado, o Angular sabe que `result` foi invalidado e que certos trechos do template leem esse valor. Sem depender de um "talvez tudo tenha mudado" como primeiro impulso mental.
+O Conversor de Medidas foi desenhado para funcionar bem nesse modelo. Quando `inputValue.set(100)` é chamado, o Angular sabe que `result` foi invalidado e que certos trechos do template leem esse valor. Sem depender de um "talvez tudo tenha mudado" como primeiro impulso mental.
 
 ### "Como isso melhora clareza e previsibilidade em projetos grandes?"
 

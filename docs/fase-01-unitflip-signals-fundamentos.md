@@ -7,6 +7,34 @@
 
 ---
 
+## Sumário
+
+- [1. Visão da Fase](#1-visão-da-fase)
+- [2. O que Será Construído](#2-o-que-será-construído)
+- [3. O que Você Vai Aprender](#3-o-que-você-vai-aprender)
+- [4. Modelo Mental Central](#4-modelo-mental-central)
+- [5. Intuição e Analogias](#5-intuição-e-analogias)
+- [6. Mapa da Construção](#6-mapa-da-construção)
+- [7. Construção Progressiva do Projeto](#7-construção-progressiva-do-projeto)
+  - [Acordo de baixa carga cognitiva](#acordo-de-baixa-carga-cognitiva)
+  - [Etapa 1 — Criar o projeto e o componente base](#etapa-1--criar-o-projeto-e-o-componente-base)
+  - [Etapa 2 — O primeiro signal: valor digitado](#etapa-2--o-primeiro-signal-valor-digitado)
+  - [Etapa 3 — Unidades de origem e destino](#etapa-3--unidades-de-origem-e-destino)
+  - [Etapa 4 — O primeiro computed: conversão em tempo real](#etapa-4--o-primeiro-computed-conversão-em-tempo-real)
+  - [Etapa 5 — Expandir para múltiplas categorias](#etapa-5--expandir-para-múltiplas-categorias)
+  - [Etapa 6 — Histórico de conversões](#etapa-6--histórico-de-conversões)
+  - [Etapa 7 — Persistir histórico com effect](#etapa-7--persistir-histórico-com-effect)
+  - [Etapa 8 — Carregar histórico ao iniciar](#etapa-8--carregar-histórico-ao-iniciar)
+- [8. Explicações Guiadas Pós-Construção](#8-explicações-guiadas-pós-construção)
+- [9. Comparações Fundamentais](#9-comparações-fundamentais)
+- [10. Laboratório de Erros Comuns](#10-laboratório-de-erros-comuns)
+- [11. Checkpoints Cognitivos](#11-checkpoints-cognitivos)
+- [12. Exercícios de Consolidação](#12-exercícios-de-consolidação)
+- [13. Perguntas de Entrevista e Visão Sênior](#13-perguntas-de-entrevista-e-visão-sênior)
+- [14. Resumo Final da Fase](#14-resumo-final-da-fase)
+
+---
+
 ## 1. Visão da Fase
 
 ### Objetivo
@@ -298,6 +326,18 @@ A progressão segue o princípio de carga cognitiva mínima:
 
 ## 7. Construção Progressiva do Projeto
 
+### Acordo de baixa carga cognitiva
+
+Esta seção tem um compromisso: cada passo deve ensinar **uma coisa principal por vez**. Quando aparecer código que existe só para conversar com o navegador, validar entrada ou deixar a tela mais confortável, ele será tratado como apoio, não como o centro da aula.
+
+Use esta regra enquanto codifica:
+
+1. Primeiro entenda qual signal, computed ou effect acabou de entrar.
+2. Depois entenda o código utilitário ao redor.
+3. Se o CSS aparecer, copie como **andaime visual**. Ele existe para deixar a tela alinhada e tranquila, não para virar assunto da fase.
+
+O objetivo é que você não precise gastar energia com uma tela torta, um ternário denso ou uma conversão de tipo misteriosa enquanto ainda está formando o modelo mental de reatividade.
+
 ### Etapa 1 — Criar o projeto e o componente base
 
 **Objetivo:** Ter um projeto Angular 21 limpo rodando, sem ruído.
@@ -316,6 +356,26 @@ ng serve
 
 Abra `http://localhost:4200` e confirme que a página padrão do Angular aparece.
 
+Antes de limpar o componente, ajuste o CSS global uma única vez:
+
+```css
+/* src/styles.css */
+html {
+  background: #f7f8fb;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f7f8fb;
+}
+```
+
+**Por que isso entra agora:** o fundo claro pertence à página inteira, não apenas ao componente. O `margin: 0` remove a margem padrão do navegador. O `min-height: 100vh` faz o `body` ocupar pelo menos a altura visível da janela. Juntos, eles evitam tanto a faixa de fundo limitada ao topo quanto a barra de rolagem artificial causada por `100vh` somado à margem padrão do `body`.
+
+Pense assim: `src/styles.css` pinta a folha inteira; `app.component.ts` organiza o cartão onde vamos estudar reatividade.
+
 Agora limpe o `app.component.ts` para começar do zero:
 
 ```typescript
@@ -325,24 +385,49 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-root',
   template: `
-    <h1>UnitFlip</h1>
-    <p>Conversor de unidades — Fase 01</p>
+    <main class="unitflip">
+      <h1>UnitFlip</h1>
+      <p class="subtitle">Conversor de unidades — Fase 01</p>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-      max-width: 480px;
-      margin: 2rem auto;
-      font-family: system-ui, sans-serif;
+      box-sizing: border-box;
+      padding: 2rem 1rem;
+      color: #172033;
+    }
+
+    .unitflip {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #5b6472;
     }
   `
 })
 export class AppComponent {}
 ```
 
-**O que esse código ensina:** Nada de signals ainda. Só a estrutura mínima de um standalone component com template inline. Esse é o ponto de partida.
+**O que esse código ensina:** Nada de signals ainda. Só a estrutura mínima de um standalone component com template inline.
 
-**Checkpoint:** A página exibe "UnitFlip" e "Conversor de unidades — Fase 01". Se não exibe, resolva antes de seguir.
+**O que é só andaime visual:** o reset em `src/styles.css`, `.unitflip`, `.subtitle`, `padding`, `border` e `background`. Eles deixam a tela estável desde o começo para você não precisar estudar reatividade em uma interface desalinhada. Repare na separação: o `body` cuida do fundo da página inteira; o componente cuida do conteúdo.
+
+**Checkpoint:** A página exibe "UnitFlip" e "Conversor de unidades — Fase 01" dentro de uma área branca alinhada, com fundo claro ocupando a página inteira e sem barra de rolagem vertical desnecessária? Se não exibe assim, resolva antes de seguir.
+
+**Se apareceu uma barra de rolagem:** confira se `src/styles.css` tem `body { margin: 0; }`. Sem esse reset, a altura de `100vh` pode somar com a margem padrão do navegador.
 
 ---
 
@@ -352,6 +437,44 @@ export class AppComponent {}
 
 **Raciocínio:** O valor que o usuário digita é o dado mais fundamental do conversor. Ele é a *fonte de verdade* de toda a aplicação. Sem ele, não há nada para converter.
 
+Nesta etapa, vamos em três micro-passos. A ideia é não misturar `signal`, binding de input e tratamento de evento na mesma mordida.
+
+#### Micro-passo 2.1 — criar e ler o signal
+
+Primeiro, adicione apenas o signal e uma leitura no template:
+
+```typescript
+inputValue = signal(0);
+```
+
+```html
+<p class="result">Valor atual: {{ inputValue() }}</p>
+```
+
+Aqui só existem duas ideias:
+
+1. `signal(0)` cria uma fonte de estado com valor inicial `0`.
+2. `inputValue()` lê o valor. Os parênteses são a leitura reativa.
+
+**Rode agora:** a tela deve mostrar `Valor atual: 0`. Ainda não existe input. Isso é intencional.
+
+#### Micro-passo 2.2 — mostrar o valor dentro do input
+
+Agora adicione o input lendo o mesmo signal:
+
+```html
+<input
+  type="number"
+  [value]="inputValue()"
+/>
+```
+
+`[value]="inputValue()"` significa: "o valor visual deste input vem do signal". Neste ponto, se você digitar no campo, o parágrafo ainda não muda. Falta ligar o evento do navegador ao signal.
+
+#### Micro-passo 2.3 — atualizar o signal quando o usuário digita
+
+Agora sim entra o evento `(input)` e o método `onInputChange`.
+
 ```typescript
 // src/app/app.component.ts
 import { Component, signal } from '@angular/core';
@@ -359,31 +482,80 @@ import { Component, signal } from '@angular/core';
 @Component({
   selector: 'app-root',
   template: `
-    <h1>UnitFlip</h1>
+    <main class="unitflip">
+      <h1>UnitFlip</h1>
+      <p class="subtitle">Conversor de unidades — Fase 01</p>
 
-    <label>
-      Valor:
-      <input
-        type="number"
-        [value]="inputValue()"
-        (input)="onInputChange($event)"
-        placeholder="Digite um número"
-      />
-    </label>
+      <div class="form-grid">
+        <label>
+          Valor
+          <input
+            type="number"
+            [value]="inputValue()"
+            (input)="onInputChange($event)"
+            placeholder="Digite um número"
+          />
+        </label>
+      </div>
 
-    <p>Valor atual: {{ inputValue() }}</p>
+      <p class="result">Valor atual: {{ inputValue() }}</p>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-      max-width: 480px;
-      margin: 2rem auto;
-      font-family: system-ui, sans-serif;
+      box-sizing: border-box;
+      padding: 2rem 1rem;
+      color: #172033;
     }
+
+    .unitflip {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #5b6472;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      font-weight: 600;
+    }
+
     input {
-      font-size: 1.2rem;
-      padding: 0.4rem;
-      width: 200px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #b8c0cc;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .result {
+      margin: 1.25rem 0 0;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #eef3f8;
+      font-weight: 700;
     }
   `
 })
@@ -391,8 +563,11 @@ export class AppComponent {
   inputValue = signal(0);
 
   onInputChange(event: Event) {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    this.inputValue.set(isNaN(value) ? 0 : value);
+    const input = event.target as HTMLInputElement;
+    const value = input.valueAsNumber;
+    const safeValue = Number.isNaN(value) ? 0 : value;
+
+    this.inputValue.set(safeValue);
   }
 }
 ```
@@ -402,18 +577,44 @@ export class AppComponent {
 1. `inputValue = signal(0)` — Cria um signal com valor inicial `0`. Este é o **estado fonte**. É mutável: pode ser atualizado com `.set()`.
 2. `[value]="inputValue()"` — Property binding. Lê o signal (note os parênteses) e vincula ao atributo `value` do input.
 3. `(input)="onInputChange($event)"` — Event binding. Quando o usuário digita, chama o método que atualiza o signal.
-4. `this.inputValue.set(...)` — Atualiza o signal. Qualquer lugar que lê `inputValue()` — no template ou em outros signals — recebe a atualização automaticamente.
-5. `{{ inputValue() }}` — Interpolação. O template lê o signal e exibe. Quando o signal muda, só este trecho atualiza.
+4. `event.target as HTMLInputElement` — O DOM entrega um `Event` genérico. Esta linha diz ao TypeScript: "neste caso, o alvo do evento é um input HTML".
+5. `input.valueAsNumber` — Lê o valor do campo como número. Se o campo estiver vazio, o navegador pode devolver `NaN`.
+6. `Number.isNaN(value) ? 0 : value` — Cria um valor seguro. Se não houver número válido, usamos `0`.
+7. `this.inputValue.set(safeValue)` — Atualiza o signal com um valor já limpo.
+8. `{{ inputValue() }}` — Interpolação. O template lê o signal e exibe o valor atualizado.
+
+**Por que quebrar em quatro linhas?**
+
+Esta versão:
+
+```typescript
+const input = event.target as HTMLInputElement;
+const value = input.valueAsNumber;
+const safeValue = Number.isNaN(value) ? 0 : value;
+
+this.inputValue.set(safeValue);
+```
+
+ensina melhor que esta:
+
+```typescript
+this.inputValue.set(isNaN(value) ? 0 : value);
+```
+
+A segunda é curta, mas comprime parsing do DOM, tratamento de número inválido e atualização do signal em uma tacada só. Nesta fase, clareza vale mais que concisão.
 
 **O que esse código ensina:**
 - Signal é criado com `signal(valorInicial)`.
 - Signal é lido com parênteses: `meuSignal()`.
 - Signal é atualizado com `.set(novoValor)`.
-- O template é reativo: mudou o signal, mudou a tela.
+- `$event` é a ponte entre o evento nativo do navegador e o método do componente.
+- O template registra leituras reativas quando chama `inputValue()`.
 
 **Erro comum:** Esquecer os parênteses. Escrever `{{ inputValue }}` em vez de `{{ inputValue() }}`. Sem parênteses, o template exibe a *função signal*, não o *valor*.
 
-**Checkpoint:** Digite `42` no campo. O parágrafo abaixo exibe "Valor atual: 42" em tempo real? Se sim, o signal está funcionando.
+**Checkpoint:** Digite `42` no campo. O bloco azul-claro exibe "Valor atual: 42" em tempo real? Se sim, o signal está funcionando.
+
+**Se travar aqui:** leia só o método `onInputChange` e explique em voz alta: "pego o input, leio número, protejo contra `NaN`, atualizo o signal". Se essa frase fizer sentido, siga.
 
 **Mini desafio:** Mude o valor inicial de `0` para `100`. O que muda na tela ao carregar? O input começa preenchido com 100? A interpolação mostra 100? Isso confirma que o valor inicial do signal é refletido imediatamente no template.
 
@@ -424,6 +625,46 @@ export class AppComponent {
 **Objetivo:** Adicionar mais signals para as unidades selecionadas, formando o conjunto completo de entradas do conversor.
 
 **Raciocínio:** O conversor precisa de três informações: o valor, a unidade de origem e a unidade de destino. Cada uma é um estado independente que o usuário controla. Cada uma é um signal.
+
+Antes do código completo, vamos separar as três ideias novas.
+
+#### Ideia 1 — limitar as unidades possíveis
+
+```typescript
+type TemperatureUnit = '°C' | '°F' | 'K';
+
+const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
+```
+
+`TemperatureUnit` é um tipo literal. Ele diz ao TypeScript: "uma unidade de temperatura só pode ser `'°C'`, `'°F'` ou `'K'`". Isso evita que você coloque `'metros'` por acidente em um signal de temperatura.
+
+#### Ideia 2 — cada select controla um signal
+
+```typescript
+unitFrom = signal<TemperatureUnit>('°C');
+unitTo = signal<TemperatureUnit>('°F');
+```
+
+Agora existem três fontes de verdade:
+
+1. `inputValue`: o número digitado.
+2. `unitFrom`: a unidade de origem.
+3. `unitTo`: a unidade de destino.
+
+#### Ideia 3 — o DOM sempre entrega string
+
+O valor de um `<select>` vem do navegador como texto. Mesmo quando as opções estão tipadas no TypeScript, o DOM não sabe disso. Por isso usamos uma função pequena para fazer a ponte:
+
+```typescript
+asTemperatureUnit(event: Event): TemperatureUnit {
+  const select = event.target as HTMLSelectElement;
+  return select.value as TemperatureUnit;
+}
+```
+
+Essa função **não converte temperatura**. Ela só interpreta o valor selecionado como uma das unidades permitidas.
+
+Agora veja o código completo da etapa:
 
 ```typescript
 // src/app/app.component.ts
@@ -436,58 +677,106 @@ const TEMPERATURE_UNITS: TemperatureUnit[] = ['°C', '°F', 'K'];
 @Component({
   selector: 'app-root',
   template: `
-    <h1>UnitFlip</h1>
+    <main class="unitflip">
+      <h1>UnitFlip</h1>
+      <p class="subtitle">Conversor de unidades — Fase 01</p>
 
-    <label>
-      Valor:
-      <input
-        type="number"
-        [value]="inputValue()"
-        (input)="onInputChange($event)"
-      />
-    </label>
+      <div class="form-grid">
+        <label>
+          Valor
+          <input
+            type="number"
+            [value]="inputValue()"
+            (input)="onInputChange($event)"
+          />
+        </label>
 
-    <label>
-      De:
-      <select
-        [value]="unitFrom()"
-        (change)="unitFrom.set(asUnit($event))"
-      >
-        @for (unit of units; track unit) {
-          <option [value]="unit">{{ unit }}</option>
-        }
-      </select>
-    </label>
+        <label>
+          De
+          <select
+            [value]="unitFrom()"
+            (change)="onUnitFromChange($event)"
+          >
+            @for (unit of units; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
 
-    <label>
-      Para:
-      <select
-        [value]="unitTo()"
-        (change)="unitTo.set(asUnit($event))"
-      >
-        @for (unit of units; track unit) {
-          <option [value]="unit">{{ unit }}</option>
-        }
-      </select>
-    </label>
+        <label>
+          Para
+          <select
+            [value]="unitTo()"
+            (change)="onUnitToChange($event)"
+          >
+            @for (unit of units; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
+      </div>
 
-    <p>
-      {{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}
-    </p>
+      <p class="result">
+        {{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}
+      </p>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-      max-width: 480px;
-      margin: 2rem auto;
-      font-family: system-ui, sans-serif;
+      box-sizing: border-box;
+      padding: 2rem 1rem;
+      color: #172033;
     }
-    label { display: block; margin: 0.8rem 0; }
+
+    .unitflip {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #5b6472;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      font-weight: 600;
+    }
+
     input, select {
-      font-size: 1.1rem;
-      padding: 0.4rem;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #b8c0cc;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
     }
-    input { width: 200px; }
+
+    .result {
+      margin: 1.25rem 0 0;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #eef3f8;
+      font-weight: 700;
+    }
   `
 })
 export class AppComponent {
@@ -498,12 +787,24 @@ export class AppComponent {
   unitTo = signal<TemperatureUnit>('°F');
 
   onInputChange(event: Event) {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    this.inputValue.set(isNaN(value) ? 0 : value);
+    const input = event.target as HTMLInputElement;
+    const value = input.valueAsNumber;
+    const safeValue = Number.isNaN(value) ? 0 : value;
+
+    this.inputValue.set(safeValue);
   }
 
-  asUnit(event: Event): TemperatureUnit {
-    return (event.target as HTMLSelectElement).value as TemperatureUnit;
+  onUnitFromChange(event: Event) {
+    this.unitFrom.set(this.asTemperatureUnit(event));
+  }
+
+  onUnitToChange(event: Event) {
+    this.unitTo.set(this.asTemperatureUnit(event));
+  }
+
+  asTemperatureUnit(event: Event): TemperatureUnit {
+    const select = event.target as HTMLSelectElement;
+    return select.value as TemperatureUnit;
   }
 }
 ```
@@ -511,18 +812,23 @@ export class AppComponent {
 **Leitura guiada:**
 
 1. `unitFrom = signal<TemperatureUnit>('°C')` — Um signal tipado. O TypeScript garante que só valores válidos (`'°C'`, `'°F'`, `'K'`) entram.
-2. `unitFrom.set(asUnit($event))` — Atualiza o signal direto no template via método auxiliar. Sem intermediários.
-3. `@for (unit of units; track unit)` — Control flow moderno do Angular. Renderiza as opções do select. `track unit` diz ao Angular como identificar cada item para otimizar re-renderização.
-4. `{{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}` — Três signals lidos no template. Cada leitura cria uma dependência reativa. Mude a unidade de origem e observe que o Angular sabe quais consumidores daquele signal precisam ser reavaliados.
+2. `(change)="onUnitFromChange($event)"` — O template não faz conversão de tipo. Ele só encaminha o evento para um método com nome claro.
+3. `onUnitFromChange` e `onUnitToChange` — Atualizam os signals de unidade. Cada handler faz uma coisa pequena.
+4. `asTemperatureUnit(event)` — Pega o `<select>` que disparou o evento e lê o valor selecionado. A asserção `as TemperatureUnit` informa ao TypeScript que esse valor vem da lista controlada por `TEMPERATURE_UNITS`.
+5. `@for (unit of units; track unit)` — Control flow moderno do Angular. Renderiza as opções do select. `track unit` diz ao Angular como identificar cada item para otimizar re-renderização.
+6. `{{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}` — Três signals lidos no template. Cada leitura cria uma dependência reativa. Mude a unidade de origem e observe que o Angular sabe quais consumidores daquele signal precisam ser reavaliados.
 
 **O que esse código ensina:**
 - Signals podem ser tipados: `signal<Tipo>(valorInicial)`.
 - Cada signal é independente. Mudar `unitFrom` não afeta `inputValue` nem `unitTo`.
+- Eventos do DOM costumam precisar de uma pequena ponte de tipagem antes de chegar ao signal.
 - O template lê múltiplos signals de forma natural. Sem subscribe, sem pipe async, sem ngOnChanges.
 
 **Erro comum:** Usar `.set()` com tipo errado. Se `unitFrom` é `signal<TemperatureUnit>('°C')`, tentar `unitFrom.set('metros')` dá erro de tipo. O TypeScript protege.
 
-**Checkpoint:** Mude a unidade de origem para "°F" e a unidade de destino para "K". O parágrafo mostra "0 °F = ??? K"? Se sim, os três signals estão reativos e independentes.
+**Checkpoint:** Mude a unidade de origem para "°F" e a unidade de destino para "K". O bloco de resultado mostra "0 °F = ??? K"? Se sim, os três signals estão reativos e independentes.
+
+**Se travar aqui:** diga em voz alta: "`asTemperatureUnit` não converte temperatura; ele só transforma um evento de select em uma unidade tipada". Essa distinção evita muita confusão.
 
 **Observe:** Ainda há "???" no resultado. Falta o `computed`. Esse é o próximo passo — e o momento mais importante da fase.
 
@@ -573,62 +879,106 @@ import { Component, signal, computed } from '@angular/core';
 @Component({
   selector: 'app-root',
   template: `
-    <h1>UnitFlip</h1>
+    <main class="unitflip">
+      <h1>UnitFlip</h1>
+      <p class="subtitle">Conversor de unidades — Fase 01</p>
 
-    <label>
-      Valor:
-      <input
-        type="number"
-        [value]="inputValue()"
-        (input)="onInputChange($event)"
-      />
-    </label>
+      <div class="form-grid">
+        <label>
+          Valor
+          <input
+            type="number"
+            [value]="inputValue()"
+            (input)="onInputChange($event)"
+          />
+        </label>
 
-    <label>
-      De:
-      <select
-        [value]="unitFrom()"
-        (change)="unitFrom.set(asUnit($event))"
-      >
-        @for (unit of units; track unit) {
-          <option [value]="unit">{{ unit }}</option>
-        }
-      </select>
-    </label>
+        <label>
+          De
+          <select
+            [value]="unitFrom()"
+            (change)="onUnitFromChange($event)"
+          >
+            @for (unit of units; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
 
-    <label>
-      Para:
-      <select
-        [value]="unitTo()"
-        (change)="unitTo.set(asUnit($event))"
-      >
-        @for (unit of units; track unit) {
-          <option [value]="unit">{{ unit }}</option>
-        }
-      </select>
-    </label>
+        <label>
+          Para
+          <select
+            [value]="unitTo()"
+            (change)="onUnitToChange($event)"
+          >
+            @for (unit of units; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
+      </div>
 
-    <div class="result">
-      {{ inputValue() }} {{ unitFrom() }} = {{ result() | number:'1.2-2' }} {{ unitTo() }}
-    </div>
+      <div class="result">
+        {{ inputValue() }} {{ unitFrom() }} =
+        {{ result() | number:'1.2-2' }} {{ unitTo() }}
+      </div>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-      max-width: 480px;
-      margin: 2rem auto;
-      font-family: system-ui, sans-serif;
+      box-sizing: border-box;
+      padding: 2rem 1rem;
+      color: #172033;
     }
-    label { display: block; margin: 0.8rem 0; }
-    input, select { font-size: 1.1rem; padding: 0.4rem; }
-    input { width: 200px; }
-    .result {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: #f0f4f8;
+
+    .unitflip {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d9dee8;
       border-radius: 8px;
-      font-size: 1.3rem;
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #5b6472;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
       font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #b8c0cc;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .result {
+      margin-top: 1.25rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #eef3f8;
+      font-weight: 700;
     }
   `
 })
@@ -648,15 +998,39 @@ export class AppComponent {
   );
 
   onInputChange(event: Event) {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    this.inputValue.set(isNaN(value) ? 0 : value);
+    const input = event.target as HTMLInputElement;
+    const value = input.valueAsNumber;
+    const safeValue = Number.isNaN(value) ? 0 : value;
+
+    this.inputValue.set(safeValue);
   }
 
-  asUnit(event: Event): TemperatureUnit {
-    return (event.target as HTMLSelectElement).value as TemperatureUnit;
+  onUnitFromChange(event: Event) {
+    this.unitFrom.set(this.asTemperatureUnit(event));
+  }
+
+  onUnitToChange(event: Event) {
+    this.unitTo.set(this.asTemperatureUnit(event));
+  }
+
+  asTemperatureUnit(event: Event): TemperatureUnit {
+    const select = event.target as HTMLSelectElement;
+    return select.value as TemperatureUnit;
   }
 }
 ```
+
+**O que acabou de entrar de novo?**
+
+Só uma coisa conceitual: `result = computed(...)`.
+
+O resto é continuidade:
+
+- O input continua atualizando `inputValue`.
+- Os selects continuam atualizando `unitFrom` e `unitTo`.
+- `convertTemperature` é matemática pura: recebe valores comuns e devolve um número.
+- O CSS continua sendo andaime visual.
+- A novidade é que o resultado deixou de ser `???` e passou a ser uma fórmula reativa.
 
 **Leitura guiada — esta merece atenção extra:**
 
@@ -722,6 +1096,8 @@ Se sim, o `computed` está derivando corretamente a partir de três signals.
 **Objetivo:** Adicionar distância e peso além de temperatura, com um seletor de categoria.
 
 **Raciocínio:** Repetir o pattern `signal + computed` em mais contextos consolida o aprendizado. A variação mostra que o modelo é o mesmo — muda o domínio, a reatividade funciona igual.
+
+Você verá uma função chamada `asUnit`. Ela é a versão genérica de `asTemperatureUnit`: pega o valor textual de um `<select>` e devolve uma unidade. Não é uma função de conversão matemática.
 
 ```typescript
 // src/app/app.component.ts
@@ -792,88 +1168,138 @@ const CATEGORY_KEYS: Category[] = ['temperatura', 'distância', 'peso'];
 @Component({
   selector: 'app-root',
   template: `
-    <h1>UnitFlip</h1>
+    <main class="unitflip">
+      <h1>UnitFlip</h1>
+      <p class="subtitle">Conversor de unidades — Fase 01</p>
 
-    <nav>
-      @for (cat of categoryKeys; track cat) {
-        <button
-          [class.active]="category() === cat"
-          (click)="onCategoryChange(cat)"
-        >
-          {{ categories[cat].label }}
-        </button>
-      }
-    </nav>
-
-    <label>
-      Valor:
-      <input
-        type="number"
-        [value]="inputValue()"
-        (input)="onInputChange($event)"
-      />
-    </label>
-
-    <label>
-      De:
-      <select
-        [value]="unitFrom()"
-        (change)="unitFrom.set(asUnit($event))"
-      >
-        @for (unit of currentUnits(); track unit) {
-          <option [value]="unit">{{ unit }}</option>
+      <nav class="category-tabs">
+        @for (cat of categoryKeys; track cat) {
+          <button
+            [class.active]="category() === cat"
+            (click)="onCategoryChange(cat)"
+          >
+            {{ categories[cat].label }}
+          </button>
         }
-      </select>
-    </label>
+      </nav>
 
-    <label>
-      Para:
-      <select
-        [value]="unitTo()"
-        (change)="unitTo.set(asUnit($event))"
-      >
-        @for (unit of currentUnits(); track unit) {
-          <option [value]="unit">{{ unit }}</option>
-        }
-      </select>
-    </label>
+      <div class="form-grid">
+        <label>
+          Valor
+          <input
+            type="number"
+            [value]="inputValue()"
+            (input)="onInputChange($event)"
+          />
+        </label>
 
-    <div class="result">
-      {{ inputValue() }} {{ unitFrom() }} =
-      {{ result() | number:'1.2-4' }} {{ unitTo() }}
-    </div>
+        <label>
+          De
+          <select
+            [value]="unitFrom()"
+            (change)="onUnitFromChange($event)"
+          >
+            @for (unit of currentUnits(); track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          Para
+          <select
+            [value]="unitTo()"
+            (change)="onUnitToChange($event)"
+          >
+            @for (unit of currentUnits(); track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="result">
+        {{ inputValue() }} {{ unitFrom() }} =
+        {{ result() | number:'1.2-4' }} {{ unitTo() }}
+      </div>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-      max-width: 480px;
-      margin: 2rem auto;
-      font-family: system-ui, sans-serif;
+      box-sizing: border-box;
+      padding: 2rem 1rem;
+      color: #172033;
     }
-    nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-    nav button {
-      padding: 0.5rem 1rem;
-      border: 1px solid #ccc;
+
+    .unitflip {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      padding: 1.5rem;
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
       background: #fff;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.95rem;
     }
-    nav button.active {
+
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #5b6472;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .category-tabs button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #b8c0cc;
+      border-radius: 6px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .category-tabs button.active {
       background: #1a73e8;
       color: #fff;
       border-color: #1a73e8;
     }
-    label { display: block; margin: 0.8rem 0; }
-    input, select { font-size: 1.1rem; padding: 0.4rem; }
-    input { width: 200px; }
-    .result {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: #f0f4f8;
-      border-radius: 8px;
-      font-size: 1.3rem;
+
+    .form-grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
       font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid #b8c0cc;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .result {
+      margin-top: 1.25rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      background: #eef3f8;
+      font-weight: 700;
     }
   `
 })
@@ -906,15 +1332,39 @@ export class AppComponent {
   }
 
   onInputChange(event: Event) {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    this.inputValue.set(isNaN(value) ? 0 : value);
+    const input = event.target as HTMLInputElement;
+    const value = input.valueAsNumber;
+    const safeValue = Number.isNaN(value) ? 0 : value;
+
+    this.inputValue.set(safeValue);
+  }
+
+  onUnitFromChange(event: Event) {
+    this.unitFrom.set(this.asUnit(event));
+  }
+
+  onUnitToChange(event: Event) {
+    this.unitTo.set(this.asUnit(event));
   }
 
   asUnit(event: Event): Unit {
-    return (event.target as HTMLSelectElement).value;
+    const select = event.target as HTMLSelectElement;
+    return select.value;
   }
 }
 ```
+
+**O que acabou de entrar de novo?**
+
+Nesta etapa entram três ideias, mas elas têm papéis separados:
+
+1. `category` é uma nova fonte de verdade: qual categoria está ativa.
+2. `currentUnits` é uma derivação: quais unidades pertencem à categoria atual.
+3. `result` passa a usar a configuração da categoria atual.
+
+A matemática de `convertViaBase` e `convertTemperature` cresceu, mas ela continua fora do núcleo reativo. Pense nela como uma calculadora comum que o `computed` chama.
+
+O método `asUnit` tem o mesmo papel que `asTemperatureUnit` na Etapa 3. A diferença é que agora as unidades podem ser temperatura, distância ou peso, então o tipo genérico `Unit = string` basta para esta fase.
 
 **Leitura guiada:**
 
@@ -969,7 +1419,11 @@ export class AppComponent {
       category: CATEGORIES[this.category()].label,
       timestamp: Date.now(),
     };
-    this.history.update(prev => [entry, ...prev].slice(0, 10));
+
+    this.history.update(previousEntries => {
+      const nextEntries = [entry, ...previousEntries];
+      return nextEntries.slice(0, 10);
+    });
   }
 
   clearHistory() {
@@ -977,6 +1431,17 @@ export class AppComponent {
   }
 }
 ```
+
+**O que acabou de entrar de novo?**
+
+Só um novo signal fonte: `history`.
+
+O restante é código de lista:
+
+- `entry` monta uma conversão salva.
+- `previousEntries` é o histórico antigo.
+- `nextEntries` é o novo histórico, com a entrada recente no topo.
+- `.slice(0, 10)` mantém só as 10 últimas.
 
 No template, adicione um botão de salvar e a lista de histórico:
 
@@ -1003,15 +1468,19 @@ No template, adicione um botão de salvar e a lista de histórico:
 **Leitura guiada:**
 
 ```typescript
-this.history.update(prev => [entry, ...prev].slice(0, 10));
+this.history.update(previousEntries => {
+  const nextEntries = [entry, ...previousEntries];
+  return nextEntries.slice(0, 10);
+});
 ```
 
-Esta linha merece atenção especial:
+Este trecho merece atenção especial:
 
 1. `.update()` recebe uma função que recebe o valor anterior e retorna o novo valor. É diferente de `.set()`, que simplesmente substitui.
-2. `[entry, ...prev]` cria um **novo array** com a nova entrada no início, seguida das anteriores. Não modifica o array existente.
-3. `.slice(0, 10)` limita a 10 entradas. Sem isso, o histórico cresceria indefinidamente.
-4. O signal detecta a mudança porque recebeu uma **nova referência** de array. Se usássemos `prev.push(entry); return prev;`, o valor retornado teria a mesma referência. Pela igualdade padrão, isso parece "o mesmo array" para o signal, mesmo que o conteúdo interno tenha sido mutado.
+2. `previousEntries` nomeia o histórico anterior. O nome longo é proposital: reduz adivinhação.
+3. `[entry, ...previousEntries]` cria um **novo array** com a nova entrada no início, seguida das anteriores. Não modifica o array existente.
+4. `.slice(0, 10)` limita a 10 entradas. Sem isso, o histórico cresceria indefinidamente.
+5. O signal detecta a mudança porque recebeu uma **nova referência** de array. Se usássemos `prev.push(entry); return prev;`, o valor retornado teria a mesma referência. Pela igualdade padrão, isso parece "o mesmo array" para o signal, mesmo que o conteúdo interno tenha sido mutado.
 
 **O que esse código ensina:**
 - Signals com arrays pedem atualizações imutáveis: crie um novo array em vez de modificar o existente.
@@ -1062,6 +1531,12 @@ export class AppComponent {
   // ... métodos existentes ...
 }
 ```
+
+**O que acabou de entrar de novo?**
+
+Só o primeiro `effect`.
+
+Ele lê `history()` e escreve no `localStorage`. Essa é a fronteira importante: `history` pertence ao Angular; `localStorage` pertence ao navegador. O effect é a ponte.
 
 **Leitura guiada:**
 
@@ -1122,19 +1597,30 @@ function loadHistory(): ConversionEntry[] {
   try {
     const raw = localStorage.getItem('unitflip-history');
     if (!raw) return [];
+
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const isHistoryArray = Array.isArray(parsed);
+
+    if (!isHistoryArray) return [];
+    return parsed;
   } catch {
     return [];
   }
 }
 ```
 
+**O que acabou de entrar de novo?**
+
+Só uma função de inicialização: `loadHistory`.
+
+Ela não é reatividade. Ela roda uma vez para descobrir qual deve ser o valor inicial de `history`. Depois disso, o signal assume.
+
 **Leitura guiada:**
 
 1. `signal<ConversionEntry[]>(loadHistory())` — O valor inicial do signal vem de uma função que lê o localStorage. Isso acontece uma vez, na criação do signal.
 2. `try/catch` protege contra JSON inválido. Se alguém editou o localStorage manualmente e corrompeu o JSON, o conversor não quebra — começa com histórico vazio.
 3. `Array.isArray(parsed)` é uma segunda camada de proteção: mesmo que o JSON seja válido, verifica se é realmente um array.
+4. `return parsed` só acontece depois dessas proteções. Dados externos entram no app com desconfiança.
 
 **O que esse código ensina:**
 - O valor inicial de um signal pode vir de qualquer fonte síncrona. Não precisa ser literal.

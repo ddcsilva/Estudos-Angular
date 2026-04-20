@@ -1,0 +1,13 @@
+<h1>UnitFlip</h1>
+
+<label>
+  Valor:
+  <input
+    type="number"
+    [value]="inputValue()"
+    (input)="onInputChange($event)"
+    placeholder="Digite um número"
+  />
+</label>
+
+<p>Valor atual: {{ inputValue() }}</p>

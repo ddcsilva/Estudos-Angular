@@ -5,6 +5,14 @@
 > **Pré-requisito:** TypeScript básico (tipos, interfaces, arrow functions) e Angular CLI instalado (`ng version` funciona no terminal).
 > **Tempo estimado:** 3–5 horas de estudo focado, não de codificação corrida.
 
+## Como Usar Este Guia
+
+Use a fase em duas passadas:
+
+1. **Primeira passada:** siga as etapas e valide os checkpoints sem tentar otimizar o código.
+2. **Segunda passada:** releia as seções 4, 9 e 10 para consolidar o modelo mental e os erros comuns.
+3. **Quando travar:** volte uma etapa e explique em voz alta o papel de cada valor: fonte, derivação ou efeito.
+
 ---
 
 ## Sumário
@@ -177,6 +185,13 @@ Regras fundamentais:
 
 O ponto mais importante: nem todo valor que muda merece ser um signal. Um signal deve representar uma fonte de verdade da aplicação. No Conversor de Medidas, o valor digitado é fonte de verdade porque vem do usuário. O resultado da conversão não é fonte; é consequência.
 
+Exemplo rápido para fixar a diferença:
+
+- **Deve ser signal:** `unitFrom = signal('°C')`. Faz sentido porque essa unidade pode ser escolhida diretamente pelo usuário. É uma fonte de verdade da tela.
+- **Não faz sentido ser signal:** `conversionLabel = signal('0 °C = 32 °F')`. Esse texto depende totalmente de `inputValue`, `unitFrom`, `unitTo` e `result`. Se ele pode ser calculado a partir de outros valores, ele não deveria ser mais uma fonte de verdade; deveria ser um `computed` ou até uma interpolação simples no template.
+
+Pergunta prática para decidir: **alguém define esse valor diretamente ou ele sempre pode ser recalculado a partir de outros?** Se alguém define diretamente, tende a ser `signal`. Se sempre pode ser recalculado, tende a ser `computed`.
+
 ### Valor derivado: `computed()`
 
 Um computed é uma **fórmula reativa pura**. Você não define o resultado diretamente; você define como ele é calculado a partir de signals. O Angular rastreia as leituras, guarda o resultado em cache e recalcula quando alguma dependência relevante muda.
@@ -190,7 +205,7 @@ const fahrenheit = computed(() => celsius() * 9/5 + 32);
 // Você nunca precisou chamar nada. A fórmula se resolveu sozinha.
 ```
 
-Duas propriedades essenciais:
+Três propriedades importantes:
 
 1. **Preguiçoso (lazy).** O computed só calcula quando alguém lê o valor. Se ninguém lê, a fórmula não roda. Isso é eficiência — não gaste energia calculando algo que ninguém vai usar.
 
@@ -211,7 +226,7 @@ effect(() => {
 // Toda vez que cidadeSelecionada() mudar, o localStorage é atualizado.
 ```
 
-A regra de ouro: **`effect()` é para o mundo fora do Angular**. Se o resultado deve aparecer no template ou alimentar outro signal, use `computed()`. Se o resultado é salvar num storage, logar num analytics, ou atualizar uma lib de terceiros, use `effect()`.
+A regra de ouro: **`effect()` é para o mundo fora do Angular** e deve ser usado como último recurso entre as APIs reativas desta fase. Se o resultado deve aparecer no template ou alimentar outro signal, use `computed()`. Se o resultado é salvar num storage, logar num analytics, ou atualizar uma lib de terceiros, use `effect()`.
 
 Na documentação oficial, o alerta é claro: não use effects para propagar mudanças de estado. Isso pode gerar ciclos, erros de verificação e atualizações desnecessárias. No Conversor de Medidas, `effect()` é apropriado para `localStorage` porque o storage não é parte do grafo reativo do Angular.
 
@@ -359,6 +374,14 @@ O objetivo é que você não precise gastar energia com uma tela torta, um tern�
 
 **Raciocínio:** Antes de pensar em signals, confirme que o ambiente funciona. Problemas de setup não devem se misturar com aprendizado de reatividade.
 
+**Nesta etapa, faça só isso:**
+
+1. Criar o projeto.
+2. Subir o servidor.
+3. Confirmar que a página abre.
+4. Ajustar o CSS global.
+5. Limpar o componente inicial.
+
 No terminal:
 
 ```bash
@@ -369,11 +392,9 @@ ng serve
 
 > A flag `--ssr=false` simplifica o setup. SSR é tema da Fase 11. A flag `--skip-tests` evita gerar arquivos `.spec.ts` por enquanto — testes são tema da Fase 13.
 
-> **Nota de versão (Angular 21):** o scaffold atual da CLI costuma gerar `src/app/app.ts`, `src/app/app.html` e `src/app/app.css`, com a classe `App`, além de `app.config.ts` e `app.routes.ts`. Os snippets desta fase já seguem essa convenção. Se o seu projeto usar outra convenção de nomes, adapte apenas os caminhos e o nome da classe; os conceitos reativos continuam idênticos.
+> **Angular 21 neste guia:** a CLI atual costuma gerar `src/app/app.ts`, `src/app/app.html` e `src/app/app.css`, com a classe `App`, além de `app.config.ts` e `app.routes.ts`. Os snippets desta fase seguem essa convenção. Se o seu projeto usar outra convenção de nomes, adapte apenas caminhos e nome da classe.
 
-> **Nota sobre zoneless:** no Angular 21+, zoneless já é o comportamento padrão. Nesta fase, isso não exige nenhuma configuração extra. O ponto didático é treinar a mentalidade de dependências explícitas com signals, não adicionar providers manualmente.
-
-> **Nota sobre roteamento:** se o projeto gerado vier com `app.routes.ts` e `provideRouter(...)`, ignore isso por enquanto. Esses arquivos existem no scaffold, mas não fazem parte do raciocínio desta fase.
+> **O que ignorar por enquanto:** zoneless já é o padrão no Angular 21, então não há configuração extra aqui. Se o scaffold vier com `app.routes.ts` e `provideRouter(...)`, apenas ignore esses arquivos nesta fase.
 
 Abra `http://localhost:4200` e confirme que a página padrão do Angular aparece.
 
@@ -833,7 +854,7 @@ export class App {
 3. `onUnitFromChange` e `onUnitToChange` — Atualizam os signals de unidade. Cada handler faz uma coisa pequena.
 4. `asTemperatureUnit(event)` — Pega o `<select>` que disparou o evento e lê o valor selecionado. A asserção `as TemperatureUnit` informa ao TypeScript que esse valor vem da lista controlada por `TEMPERATURE_UNITS`.
 5. `@for (unit of units; track unit)` — Control flow moderno do Angular. Renderiza as opções do select. `track unit` diz ao Angular como identificar cada item para otimizar re-renderização.
-6. `[selected]="unitFrom() === unit"` — Sincroniza a opção visível do select com o valor do signal. Sem `FormsModule`, o atributo `[value]` no `<select>` não garante que o navegador exiba a opção correta na renderização inicial. O `[selected]` em cada `<option>` resolve isso: o Angular avalia a comparação e marca como selecionada a opção cujo valor coincide com o signal.
+6. `[selected]="unitFrom() === unit"` — Sincroniza a opção visível do select com o valor do signal. Nesta fase, essa abordagem é deliberadamente explícita e evita introduzir APIs de formulário antes da hora. Outras abordagens, como `[(ngModel)]` com `FormsModule`, também funcionam, mas aqui a intenção é deixar a ponte entre DOM e signal visível.
 7. `{{ inputValue() }} {{ unitFrom() }} = ??? {{ unitTo() }}` — Três signals lidos no template. Cada leitura cria uma dependência reativa. Mude a unidade de origem e observe que o Angular sabe quais consumidores daquele signal precisam ser reavaliados.
 
 **O que esse código ensina:**
@@ -1637,14 +1658,14 @@ effect(() => {
 });
 ```
 
-1. `effect()` é chamado no construtor. Efeitos precisam ser criados num **contexto de injeção** — o construtor é o lugar mais natural nesta fase. Fora desse contexto, você precisaria fornecer um `Injector` explicitamente.
+1. `effect()` é chamado no construtor. Efeitos precisam ser criados num **contexto de injeção** — o construtor é o lugar mais natural nesta fase. Como o effect nasce dentro de um componente, aqui ele é um **component effect**. Fora desse contexto, você precisaria fornecer um `Injector` explicitamente.
 2. Dentro do callback, `this.history()` é lido. O Angular rastreia essa leitura: agora o efeito **depende** de `history`. Se você lesse outros signals dentro do callback, eles também virariam dependências.
 3. Toda vez que `history` muda, o efeito roda de novo e salva no `localStorage`.
 4. O efeito roda **pelo menos uma vez** ao ser criado. Nesta etapa, antes do carregamento inicial da Etapa 8, isso significa salvar o array inicial no storage.
 5. `localStorage.setItem(...)` não entra no grafo reativo do Angular. É só uma escrita externa. Por isso este é um bom uso de `effect`.
 
 **O que esse código ensina:**
-- `effect()` é criado no construtor (contexto de injeção).
+- `effect()` é criado no construtor (contexto de injeção) e, nesta fase, se comporta como **component effect**.
 - O efeito detecta dependências automaticamente — assim como `computed`, mas com propósito diferente.
 - O efeito é para ações externas: localStorage, logging, analytics. Não para derivar valores.
 - O efeito roda automaticamente quando as dependências mudam. Você não precisa chamar nada.
@@ -1658,7 +1679,7 @@ effect(() => {
 |---|---|---|
 | **Produz valor para o Angular?** | Sim — o template lê `result()` | Não — o localStorage é externo ao Angular |
 | **É readonly?** | Sim | Não se aplica — não é um signal |
-| **Quando roda?** | Quando lido e dependências mudaram | Quando dependências mudaram (automaticamente) |
+| **Quando roda?** | Quando lido e dependências mudaram | Neste caso, durante a sincronização do Angular após mudanças nas dependências |
 | **Propósito** | Derivar estado | Sincronizar com mundo externo |
 
 Se o que você precisa aparece no template: use `computed`.
@@ -1689,13 +1710,27 @@ function loadHistory(): ConversionEntry[] {
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
-    const isHistoryArray = Array.isArray(parsed);
+    if (!Array.isArray(parsed)) return [];
 
-    if (!isHistoryArray) return [];
-    return parsed;
+    return parsed.filter(isConversionEntry);
   } catch {
     return [];
   }
+}
+
+function isConversionEntry(value: unknown): value is ConversionEntry {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const entry = value as Record<string, unknown>;
+
+  return (
+    typeof entry['value'] === 'number' &&
+    typeof entry['from'] === 'string' &&
+    typeof entry['to'] === 'string' &&
+    typeof entry['result'] === 'number' &&
+    typeof entry['category'] === 'string' &&
+    typeof entry['timestamp'] === 'number'
+  );
 }
 ```
 
@@ -1710,7 +1745,8 @@ Ela não é reatividade. Ela roda uma vez para descobrir qual deve ser o valor i
 1. `signal<ConversionEntry[]>(loadHistory())` — O valor inicial do signal vem de uma função que lê o localStorage. Isso acontece uma vez, na criação do signal.
 2. `try/catch` protege contra JSON inválido. Se alguém editou o localStorage manualmente e corrompeu o JSON, o conversor não quebra — começa com histórico vazio.
 3. `Array.isArray(parsed)` é uma segunda camada de proteção: mesmo que o JSON seja válido, verifica se é realmente um array.
-4. `return parsed` só acontece depois dessas proteções. Dados externos entram no app com desconfiança.
+4. `parsed.filter(isConversionEntry)` valida o formato mínimo de cada item antes de aceitar os dados.
+5. Só depois dessas proteções o array entra no app. Dados externos entram com desconfiança real, não apenas com confiança parcial.
 
 **O que esse código ensina:**
 - O valor inicial de um signal pode vir de qualquer fonte síncrona. Não precisa ser literal.
@@ -2044,7 +2080,7 @@ Estas perguntas validam se o modelo mental está formado, não se a sintaxe foi 
 ### Sobre computed
 
 **4. "O que acontece se nenhum lugar do template ler `result()`?"**
-> O computed nunca calcula. Ele é preguiçoso (lazy): só executa a função de derivação quando alguém lê o valor. Se ninguém lê, nenhum ciclo de CPU é gasto.
+> Se nenhum outro código também ler `result()`, o computed não calcula. Ele é preguiçoso (lazy): só executa a função de derivação quando alguém lê o valor.
 
 **5. "Por que `result` é `computed` e não `signal`?"**
 > Porque o resultado da conversão nunca é definido diretamente. Ele sempre depende de `inputValue`, `unitFrom` e `unitTo`. Fazer dele um signal criaria a responsabilidade de mantê-lo atualizado manualmente — e o risco de esquecer. O computed atualiza sozinho.
@@ -2161,7 +2197,7 @@ Estas perguntas aparecem em entrevistas para posições Angular sênior. As resp
 
 Signals são primitivos de reatividade granular. Antes deles, o Angular dependia de Zone.js para detectar mudanças: operações assíncronas como timers, promises e event listeners podiam disparar uma verificação ampla da árvore de componentes. Isso funcionava, mas era impreciso — o Angular partia da suspeita de que algo poderia ter mudado.
 
-Signals resolvem isso declarando onde o estado vive e quem depende dele. Quando um signal muda, os consumidores daquele signal podem ser notificados diretamente. O resultado é uma detecção de mudanças mais granular: o Angular trabalha com dependências conhecidas em vez de depender apenas de uma suspeita global de que "algo talvez mudou".
+Signals ajudam a resolver isso declarando onde o estado vive e quem depende dele. Quando um signal muda, os consumidores daquele signal podem ser notificados diretamente. O resultado é uma atualização mais granular para esse fluxo de estado: o Angular trabalha com dependências conhecidas em vez de depender apenas de uma suspeita global de que "algo talvez mudou".
 
 No Conversor de Medidas, quando `inputValue` muda, `result` fica desatualizado porque depende dele via `computed`, e os trechos do template que leem `inputValue()` e `result()` têm uma dependência explícita. Você não precisa espalhar chamadas de atualização por botões, selects e handlers.
 
@@ -2186,7 +2222,7 @@ A orientação oficial do Angular é evitar effects para propagar mudanças de e
 
 ### "Como signals se relacionam com o modelo zoneless?"
 
-Zone.js intercepta operações assíncronas para saber quando "algo pode ter mudado". Signals reduzem essa dependência porque o Angular passa a ter fontes de estado e consumidores rastreáveis. Isso torna o modelo zoneless natural.
+Zone.js intercepta operações assíncronas para saber quando "algo pode ter mudado". Signals reduzem essa dependência porque o Angular passa a ter fontes de estado e consumidores rastreáveis. No Angular moderno, isso combina bem com o modelo zoneless, que também usa outros gatilhos explícitos de atualização, como listeners de template e `setInput`.
 
 Nesta trilha, usamos zoneless como padrão didático para treinar a mentalidade moderna. Isso não significa que Zone.js deixou de funcionar; significa que, com signals, você aprende a depender menos de interceptação global e mais de dependências explícitas.
 
@@ -2194,7 +2230,7 @@ O Conversor de Medidas foi desenhado para funcionar bem nesse modelo. Quando `in
 
 ### "Como isso melhora clareza e previsibilidade em projetos grandes?"
 
-Em projetos com Zone.js, a pergunta "por que o template atualizou?" é difícil de responder. Qualquer operação assíncrona pode ter disparado a verificação. Com signals, a resposta é precisa: "o template atualizou porque `signal X` mudou, e este trecho do template lê `signal X`".
+Em projetos com Zone.js, a pergunta "por que o template atualizou?" é difícil de responder. Qualquer operação assíncrona pode ter disparado a verificação. Com signals, quando a atualização nasce de estado reativo, a resposta fica muito mais precisa: "este trecho atualizou porque lê `signal X`, e `signal X` mudou".
 
 Essa rastreabilidade é ouro em times grandes. Quando um bug de "o dado não atualiza" aparece, você rastreia qual signal deveria ter mudado e por quê. O caminho é linear e auditável.
 
